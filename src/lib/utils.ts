@@ -18,3 +18,12 @@ export function parseLocalDate(dateStr: string): Date {
   const [year, month, day] = dateStr.split("-").map(Number);
   return new Date(year, month - 1, day);
 }
+
+/** Format an ISO timestamp to dd/mm/yyyy hh:mm in local timezone */
+export function formatLocalDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const date = formatLocalDate(d).split("-").reverse().join("/");
+  const time = String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  return date + " " + time;
+}

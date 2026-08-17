@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatLocalDate } from "@/lib/utils";
 
 export interface ModuleStats {
-  fleet: { vehicles: number; remindersDue30: number; maintenanceMonth: number };
+  fleet: { vehicles: number; remindersDue30: number; maintenanceMonth: number; inspectionsToday: number };
   loading: boolean;
 }
 
@@ -13,7 +13,7 @@ export interface ModuleStats {
  */
 export function useDashboardModules(companyId: string | null) {
   const [stats, setStats] = useState<ModuleStats>({
-    fleet: { vehicles: 0, remindersDue30: 0, maintenanceMonth: 0 },
+    fleet: { vehicles: 0, remindersDue30: 0, maintenanceMonth: 0, inspectionsToday: 0 },
     loading: true,
   });
 
@@ -24,6 +24,21 @@ export function useDashboardModules(companyId: string | null) {
     const run = async () => {
       const monthStart = formatLocalDate(new Date()).slice(0, 7) + "-01";
       const next30 = formatLocalDate(new Date(Date.now() + 30 * 86400000));
+
+      const today = formatLocalDate(new Date());
+
+      let inspectionsToday = 0;
+      try {
+        const insp = await supabase
+          .from("fleet_checklists")
+          .select("id", { count: "exact", head: true })
+          .eq("company_id", companyId)
+          .gte("created_at", today + "T00:00:00")
+          .lte("created_at", today + "T23:59:59");
+        inspectionsToday = insp.count || 0;
+      } catch {
+        // tabela ainda não existe no ambiente → 0
+      }
 
       const [vehicles, reminders, maint] = await Promise.all([
         supabase
@@ -53,6 +68,7 @@ export function useDashboardModules(companyId: string | null) {
           vehicles: vehicles.count || 0,
           remindersDue30: reminders.count || 0,
           maintenanceMonth,
+          inspectionsToday,
         },
         loading: false,
       });

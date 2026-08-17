@@ -17,6 +17,8 @@ const Login = lazy(() => import("./pages/Login"));
 const RedefinirSenha = lazy(() => import("./pages/RedefinirSenha"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Frotas = lazy(() => import("./pages/Frotas"));
+const NovaInspecao = lazy(() => import("./pages/NovaInspecao"));
+const InspecaoDetalhe = lazy(() => import("./pages/InspecaoDetalhe"));
 const Seguranca = lazy(() => import("./pages/Seguranca"));
 const Perfil = lazy(() => import("./pages/Perfil"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
@@ -71,6 +73,8 @@ const App = () => (
                 <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                 <Route path="/dashboard" element={<ProtectedApp><Dashboard /></ProtectedApp>} />
                 <Route path="/frotas" element={<ProtectedApp><Frotas /></ProtectedApp>} />
+                <Route path="/frotas/inspecoes/nova" element={<ProtectedApp><NovaInspecao /></ProtectedApp>} />
+                <Route path="/frotas/inspecoes/:id" element={<ProtectedApp><InspecaoDetalhe /></ProtectedApp>} />
                 <Route path="/seguranca" element={<ProtectedApp><Seguranca /></ProtectedApp>} />
                 <Route path="/perfil" element={<ProtectedApp><Perfil /></ProtectedApp>} />
                 <Route path="/configuracoes" element={<ProtectedApp><Configuracoes /></ProtectedApp>} />

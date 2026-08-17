@@ -57,6 +57,7 @@ export default function FleetVehicles() {
   const [search, setSearch] = useState("");
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards");
   const [saving, setSaving] = useState(false);
+  const [inspectedToday, setInspectedToday] = useState<Set<string>>(new Set());
 
   const companyId = selectedCompany?.id;
 
@@ -77,6 +78,28 @@ export default function FleetVehicles() {
   };
 
   useEffect(() => { fetchVehicles(); }, [companyId]);
+
+  // Veículos inspecionados hoje (selo "sem inspeção hoje")
+  useEffect(() => {
+    if (!companyId) return;
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    const todayStr = y + "-" + m + "-" + d;
+    supabase
+      .from("fleet_checklists")
+      .select("vehicle_id")
+      .eq("company_id", companyId)
+      .gte("created_at", todayStr + "T00:00:00")
+      .lte("created_at", todayStr + "T23:59:59")
+      .then(({ data }) => {
+        setInspectedToday(new Set(((data || []) as { vehicle_id: string }[]).map((r) => r.vehicle_id)));
+      })
+      .catch(() => {
+        setInspectedToday(new Set()); // tabela ainda não existe no ambiente
+      });
+  }, [companyId]);
 
   const handleEdit = (v: Vehicle) => {
     setEditingId(v.id);
@@ -199,9 +222,14 @@ export default function FleetVehicles() {
           {filtered.map(v => (
             <Card key={v.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base font-bold">{v.plate}</CardTitle>
-                  <Badge variant={v.status === "ativo" ? "default" : "secondary"}>{v.status === "ativo" ? "Ativo" : "Inativo"}</Badge>
+                  <div className="flex items-center gap-1.5">
+                    {v.status === "ativo" && !inspectedToday.has(v.id) && (
+                      <Badge className="border-0 bg-warning/15 text-[10px] font-semibold text-warning-foreground">sem inspeção hoje</Badge>
+                    )}
+                    <Badge variant={v.status === "ativo" ? "default" : "secondary"}>{v.status === "ativo" ? "Ativo" : "Inativo"}</Badge>
+                  </div>
                 </div>
                 <p className="text-sm text-muted-foreground">{v.brand} {v.model} {v.year || ""}</p>
               </CardHeader>
@@ -245,7 +273,7 @@ export default function FleetVehicles() {
             <TableBody>
               {filtered.map(v => (
                 <TableRow key={v.id}>
-                  <TableCell className="font-medium">{v.plate}</TableCell>
+                  <TableCell className="font-medium">{v.plate}{v.status === "ativo" && !inspectedToday.has(v.id) && <Badge className="ml-2 border-0 bg-warning/15 text-[10px] font-semibold text-warning-foreground">sem inspeção</Badge>}</TableCell>
                   <TableCell>{v.brand} {v.model}</TableCell>
                   <TableCell>{v.year || "-"}</TableCell>
                   <TableCell>{v.current_mileage?.toLocaleString("pt-BR")}</TableCell>

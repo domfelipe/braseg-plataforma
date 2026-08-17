@@ -59,10 +59,11 @@ export default function Dashboard() {
             Ver frota
           </Button>
         </div>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <KpiCard label="Veículos ativos" value={fleet.vehicles} icon={Car} tone="navy" loading={loading} />
           <KpiCard label="Vencimentos em 30d" value={fleet.remindersDue30} icon={BellRing} tone="amber" loading={loading} />
           <KpiCard label="Custo manutenções (mês)" value={fleet.maintenanceMonth} prefix="R$ " icon={Wrench} loading={loading} />
+          <KpiCard label="Inspeções hoje" value={fleet.inspectionsToday} icon={ClipboardCheck} loading={loading} />
         </div>
       </motion.section>
 
