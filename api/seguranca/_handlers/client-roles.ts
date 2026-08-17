@@ -52,7 +52,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const companyId = await resolveCompanyId(req, body);
       await assertCompanyAccess(userId, companyId);
       await assertClientAccess(id, companyId);
-      const roleId = url.get("roleId");
+      const roleId = typeof body.roleId === "string" ? body.roleId : url.get("roleId");
       if (!roleId) return json(res, { error: "roleId obrigatório" }, 400);
       const exists = await db().query("SELECT * FROM seg_roles WHERE id = $1 AND client_id = $2", [roleId, id]);
       if ((exists.rowCount ?? 0) === 0) return json(res, { error: "Cargo não encontrado" }, 404);

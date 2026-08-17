@@ -51,7 +51,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const companyId = await resolveCompanyId(req, body);
       await assertCompanyAccess(userId, companyId);
       await assertClientAccess(id, companyId);
-      const employeeId = url.get("employeeId");
+      const employeeId = typeof body.employeeId === "string" ? body.employeeId : url.get("employeeId");
       if (!employeeId) return json(res, { error: "employeeId obrigatório" }, 400);
       const exists = await db().query("SELECT * FROM seg_employees WHERE id = $1 AND client_id = $2", [employeeId, id]);
       if ((exists.rowCount ?? 0) === 0) return json(res, { error: "Funcionário não encontrado" }, 404);

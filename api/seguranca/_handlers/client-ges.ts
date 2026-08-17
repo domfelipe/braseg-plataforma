@@ -115,7 +115,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       const companyId = await resolveCompanyId(req, body);
       await assertCompanyAccess(userId, companyId);
       await assertClientAccess(id, companyId);
-      const gesId = url.get("gesId");
+      const gesId = typeof body.gesId === "string" ? body.gesId : url.get("gesId");
       if (!gesId) return json(res, { error: "gesId obrigatório" }, 400);
       const exists = await db().query("SELECT * FROM seg_ges WHERE id = $1 AND client_id = $2", [gesId, id]);
       if ((exists.rowCount ?? 0) === 0) return json(res, { error: "GES não encontrado" }, 404);
