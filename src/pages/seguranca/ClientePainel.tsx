@@ -1,6 +1,6 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, Circle } from "lucide-react";
+import { ArrowLeft, Check, Circle, HardDriveDownload, RefreshCw } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCnpj } from "@/lib/seguranca/matrix";
+import { useOfflineSync } from "@/lib/seguranca/useOfflineSync";
 import type { SegClient, SegCounts } from "@/lib/seguranca/types";
 import Documentos from "./Documentos";
 import Ges from "./Ges";
@@ -40,6 +41,7 @@ export default function ClientePainel() {
   const navigate = useNavigate();
   const { selectedCompany } = useCompany();
   const companyId = selectedCompany?.id;
+  const off = useOfflineSync(id ?? null, companyId ?? null);
 
   const detail = useQuery({
     queryKey: ["seg-client", companyId, id],
@@ -85,7 +87,27 @@ export default function ClientePainel() {
             {client.grau_risco !== null && <Badge variant="secondary" className="ml-2 text-xs">Grau de risco {client.grau_risco}</Badge>}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => void off.prepareField()} disabled={!off.online || off.preparing}>
+            <HardDriveDownload className="h-4 w-4" />
+            {off.preparing ? "Baixando..." : "Preparar para campo"}
+          </Button>
+          {!off.online && (
+            <Button size="sm" onClick={() => void off.flush()} disabled={off.syncing}>
+              <RefreshCw className={"h-4 w-4 " + (off.syncing ? "animate-spin" : "")} />
+              Sincronizar{off.pendingCount > 0 ? " (" + off.pendingCount + ")" : ""}
+            </Button>
+          )}
+        </div>
       </div>
+
+      {!off.online && (
+        <div className="mt-4 rounded-[10px] border border-warning/40 bg-warning/10 p-3 text-xs text-warning">
+          <strong>Sem conexão</strong> — a coleta continua salva neste dispositivo
+          {off.pendingCount > 0 ? " (" + off.pendingCount + " pendência(s))" : ""}; a sincronização ocorre automaticamente ao reconectar.
+          Geração de documentos exige conexão.
+        </div>
+      )}
 
       <ol className="mt-6 flex flex-wrap items-center gap-2">
         {steps.map((s, i) => {
