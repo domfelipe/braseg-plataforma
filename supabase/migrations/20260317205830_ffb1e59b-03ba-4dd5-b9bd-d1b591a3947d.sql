@@ -42,8 +42,8 @@ BEGIN
   ) u;
 
   IF _user_ids IS NOT NULL THEN
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    SELECT unnest(_user_ids), _type, _title, _message, '/pagamentos';
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   END IF;
 
   RETURN NEW;
@@ -85,8 +85,8 @@ BEGIN
       ) u;
 
       IF _user_ids IS NOT NULL THEN
-        INSERT INTO public.notifications (user_id, type, title, message, link)
-        SELECT unnest(_user_ids), 'vencimento_proximo', 'Vencimento próximo', _message, '/financeiro';
+        -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
       END IF;
     END IF;
   END IF;
@@ -133,8 +133,8 @@ BEGIN
       ) u;
 
       IF _user_ids IS NOT NULL THEN
-        INSERT INTO public.notifications (user_id, type, title, message, link)
-        SELECT unnest(_user_ids), 'vencimento_frota', 'Vencimento de veículo próximo', _message, '/frotas';
+        -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
       END IF;
     END IF;
   END IF;

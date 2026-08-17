@@ -118,39 +118,16 @@ CREATE POLICY "fsa_insert_master" ON public.financial_snapshot_audit FOR INSERT 
   WITH CHECK (public.is_master(auth.uid()));
 
 -- Snapshot Fase 0
-INSERT INTO public.financial_snapshot_audit (batch, company_id, metric, count_value, amount_value)
-SELECT 'fase0-2026-07-10', ft.company_id,
-       ft.type || ':' || ft.status,
-       count(*)::bigint,
-       coalesce(sum(ft.amount),0)::numeric(16,2)
-FROM public.financial_transactions ft
-GROUP BY ft.company_id, ft.type, ft.status;
+-- [LGPD] dados de producao removidos na limpeza do fork Braseg
 
-INSERT INTO public.financial_snapshot_audit (batch, metric, count_value, amount_value) VALUES
- ('fase0-2026-07-10','global:tx_count',(SELECT count(*) FROM public.financial_transactions), NULL),
- ('fase0-2026-07-10','global:zero_amount',(SELECT count(*) FROM public.financial_transactions WHERE amount<=0), NULL),
- ('fase0-2026-07-10','global:chatwoot23',(SELECT count(*) FROM public.financial_transactions WHERE file_hash LIKE 'src:chatwoot:%'), NULL),
- ('fase0-2026-07-10','global:sum_all', NULL, (SELECT coalesce(sum(amount),0)::numeric(16,2) FROM public.financial_transactions));
+
+-- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
 -- Backfill dos 23: proveniência estruturada preservando file_hash legado
 -- Mapeamento perfil→conversation_id: Alice=3, Milena=2 (conforme briefing)
-INSERT INTO public.financial_source_documents
-  (company_id, transaction_id, source_type, chatwoot_account_id, conversation_id,
-   attachment_message_id, source_key, attachment_status, processing_status, metadata)
-SELECT
-  ft.company_id, ft.id, 'chatwoot', 9,
-  CASE
-    WHEN ft.file_hash LIKE 'src:chatwoot:milena:%' THEN 2::bigint
-    WHEN ft.file_hash LIKE 'src:chatwoot:alice:%'  THEN 3::bigint
-    ELSE NULL
-  END,
-  NULLIF(regexp_replace(ft.file_hash, '^src:chatwoot:[^:]+:', ''), '')::bigint,
-  ft.file_hash,
-  'blocked_missing_secret',
-  'needs_review',
-  jsonb_build_object(
-    'origin','fase1-backfill-2026-07-10',
-    'reason','CHATWOOT_API_TOKEN e CHATWOOT_BASE_URL nao configurados; bytes nao baixados; SHA-256 real nao calculado',
+-- [LGPD] dados de producao removidos na limpeza do fork Braseg
+ bytes nao baixados; SHA-256 real nao calculado',
     'legacy_file_hash', ft.file_hash
   )
 FROM public.financial_transactions ft
@@ -158,12 +135,8 @@ WHERE ft.file_hash LIKE 'src:chatwoot:%'
 ON CONFLICT (company_id, source_key) DO NOTHING;
 
 -- Auditoria da fase 1
-INSERT INTO public.financial_backfill_audit (transaction_id, company_id, batch, field, old_value, new_value, reason)
-SELECT ft.id, ft.company_id, 'fase1-proveniencia-2026-07-10',
-       'source_document_created',
-       'file_hash=' || ft.file_hash,
-       'financial_source_documents row created (attachment_status=blocked_missing_secret)',
-       'Proveniencia estruturada; bytes/SHA-256 pendentes de secret Chatwoot'
+-- [LGPD] dados de producao removidos na limpeza do fork Braseg
+ bytes/SHA-256 pendentes de secret Chatwoot'
 FROM public.financial_transactions ft
 WHERE ft.file_hash LIKE 'src:chatwoot:%';
 
@@ -173,20 +146,8 @@ WITH placeholders AS (
   FROM public.financial_transactions ft
   WHERE ft.amount <= 0
 ), docs AS (
-  INSERT INTO public.financial_source_documents
-    (company_id, transaction_id, source_type, source_key, attachment_status, processing_status, metadata)
-  SELECT p.company_id, p.id, 'legacy',
-    'legacy:placeholder:' || p.id::text,
-    'source_unavailable', 'needs_review',
-    jsonb_build_object('reason','placeholder amount<=0','origin','fase1-backfill-2026-07-10')
-  FROM placeholders p
-  ON CONFLICT (company_id, source_key) DO NOTHING
-  RETURNING id, transaction_id, company_id
-)
-INSERT INTO public.financial_document_staging
-  (company_id, source_document_id, legacy_transaction_id, extracted_amount, status)
-SELECT d.company_id, d.id, d.transaction_id, 0::numeric, 'needs_review' FROM docs d
-ON CONFLICT (source_document_id) DO NOTHING;
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
 -- View canônica enriquecida com security_invoker
 CREATE OR REPLACE VIEW public.v_financial_transactions_enriched

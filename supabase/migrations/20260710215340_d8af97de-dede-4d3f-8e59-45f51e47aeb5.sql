@@ -27,12 +27,8 @@ BEGIN
      SET status = 'pago', payment_date = _payment_date, updated_at = now()
    WHERE id = _transaction_id;
 
-  INSERT INTO public.financial_backfill_audit
-    (transaction_id, company_id, batch, field, old_value, new_value, reason, action, user_id, metadata)
-  VALUES
-    (_transaction_id, _tx.company_id, 'admin-drawer', 'status', _tx.status, 'pago',
-     COALESCE(_notes, 'Marcado como pago via drawer'), 'mark_paid', _uid,
-     jsonb_build_object('old_payment_date', _tx.payment_date, 'new_payment_date', _payment_date));
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   RETURN jsonb_build_object('ok', true, 'transaction_id', _transaction_id, 'status', 'pago');
 END; $$;
@@ -60,12 +56,8 @@ BEGIN
      SET status = 'pendente', payment_date = NULL, updated_at = now()
    WHERE id = _transaction_id;
 
-  INSERT INTO public.financial_backfill_audit
-    (transaction_id, company_id, batch, field, old_value, new_value, reason, action, user_id, metadata)
-  VALUES
-    (_transaction_id, _tx.company_id, 'admin-drawer', 'status', _tx.status, 'pendente',
-     _reason, 'reverse_paid', _uid,
-     jsonb_build_object('reverted_payment_date', _tx.payment_date));
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   RETURN jsonb_build_object('ok', true, 'transaction_id', _transaction_id, 'status', 'pendente');
 END; $$;

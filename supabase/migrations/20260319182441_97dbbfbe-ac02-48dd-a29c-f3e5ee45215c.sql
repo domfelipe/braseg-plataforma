@@ -36,19 +36,8 @@ BEGIN
   _due_date := COALESCE(NEW.nf_issue_date, CURRENT_DATE);
 
   IF TG_OP = 'INSERT' THEN
-    INSERT INTO public.financial_transactions (
-      company_id, type, description, amount, due_date, 
-      payment_date, status, city, created_by, source_payment_id,
-      attachment_url, notes
-    ) VALUES (
-      NEW.company_id, 'despesa', _description, NEW.amount, _due_date,
-      NEW.payment_date, _status, NEW.location, NEW.created_by, NEW.id,
-      NEW.nf_file_url, 
-      CASE WHEN NEW.doctor_cnpj IS NOT NULL 
-        THEN 'CNPJ: ' || NEW.doctor_cnpj || COALESCE(' | ' || NEW.doctor_company_name, '')
-        ELSE NULL 
-      END
-    );
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   ELSIF TG_OP = 'UPDATE' THEN
     UPDATE public.financial_transactions SET
       description = _description,
@@ -67,19 +56,8 @@ BEGIN
 
     -- If no row was updated (legacy data), insert
     IF NOT FOUND THEN
-      INSERT INTO public.financial_transactions (
-        company_id, type, description, amount, due_date, 
-        payment_date, status, city, created_by, source_payment_id,
-        attachment_url, notes
-      ) VALUES (
-        NEW.company_id, 'despesa', _description, NEW.amount, _due_date,
-        NEW.payment_date, _status, NEW.location, NEW.created_by, NEW.id,
-        NEW.nf_file_url,
-        CASE WHEN NEW.doctor_cnpj IS NOT NULL 
-          THEN 'CNPJ: ' || NEW.doctor_cnpj || COALESCE(' | ' || NEW.doctor_company_name, '')
-          ELSE NULL 
-        END
-      );
+      -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
     END IF;
   END IF;
 

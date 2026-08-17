@@ -63,11 +63,8 @@ BEGIN
        AND ft.city IS NULL
     RETURNING ft.id, ft.company_id, c.old_city, ft.city AS new_city
   )
-  INSERT INTO public.financial_backfill_audit
-    (transaction_id, company_id, batch, field, old_value, new_value, reason)
-  SELECT id, company_id, _batch, 'city', old_city, new_city,
-         'infer_financial_city_from_message'
-    FROM applied;
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   -- 4) Backfill de CATEGORY (26 linhas)
   WITH candidates AS (
@@ -94,12 +91,8 @@ BEGIN
        AND ft.category_id IS NULL
     RETURNING ft.id, ft.company_id, r.old_cat, ft.category_id AS new_cat_id, r.cat_name
   )
-  INSERT INTO public.financial_backfill_audit
-    (transaction_id, company_id, batch, field, old_value, new_value, reason)
-  SELECT id, company_id, _batch, 'category_id',
-         old_cat::text, new_cat_id::text,
-         'infer_financial_category_name -> ' || cat_name
-    FROM applied;
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   -- 5) Corrigir 175735d2-… (pago sem payment_date)
   WITH target AS (
@@ -118,11 +111,8 @@ BEGIN
      WHERE ft.id = t.id
     RETURNING ft.id, ft.company_id, t.payment_date AS old_pd, ft.payment_date AS new_pd
   )
-  INSERT INTO public.financial_backfill_audit
-    (transaction_id, company_id, batch, field, old_value, new_value, reason)
-  SELECT id, company_id, _batch, 'payment_date',
-         NULL, new_pd::text,
-         'pago sem payment_date; preenchido com due_date (warning)'
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+ preenchido com due_date (warning)'
     FROM applied;
 
   -- 6) Verificar invariantes DEPOIS

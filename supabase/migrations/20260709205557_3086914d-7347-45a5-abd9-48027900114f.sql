@@ -162,8 +162,8 @@ BEGIN
       _new_city := public.infer_financial_city_from_message(_r.company_id, _msg);
       IF _new_city IS NOT NULL THEN
         UPDATE public.financial_transactions SET city = _new_city WHERE id = _r.id;
-        INSERT INTO public.financial_backfill_audit(batch, transaction_id, field, old_value, new_value, reason)
-          VALUES (_batch, _r.id, 'city', _r.city, _new_city, 'infer from message');
+        -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
       END IF;
     END IF;
 
@@ -173,8 +173,8 @@ BEGIN
         _new_cat_id := public.upsert_financial_category(_r.company_id, _new_cat_name, COALESCE(_r.type,'despesa'));
         IF _new_cat_id IS NOT NULL THEN
           UPDATE public.financial_transactions SET category_id = _new_cat_id WHERE id = _r.id;
-          INSERT INTO public.financial_backfill_audit(batch, transaction_id, field, old_value, new_value, reason)
-            VALUES (_batch, _r.id, 'category_id', NULL, _new_cat_id::text, 'infer ' || _new_cat_name);
+          -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
         END IF;
       END IF;
     END IF;

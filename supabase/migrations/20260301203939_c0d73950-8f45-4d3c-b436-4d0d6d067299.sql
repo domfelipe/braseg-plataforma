@@ -292,8 +292,8 @@ CREATE TRIGGER update_professional_payments_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.user_profiles (id, full_name)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.email));
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
@@ -340,12 +340,8 @@ CREATE POLICY "Authenticated users can update receipts"
 -- =============================================
 -- 15. SEED DATA: 5 COMPANIES
 -- =============================================
-INSERT INTO public.companies (name, trade_name, cnpj, main_activity, address_street, address_number, address_complement, address_neighborhood, address_city, address_state, email, phone) VALUES
-('ACUDIR SAUDE LTDA', 'Acudir Saúde', '30.636.545/0001-50', 'Atividade médica ambulatorial', 'Av Padre Salustio Rodrigues Machado', '539', NULL, 'Centro', 'Lençóis Paulista', 'SP', 'promedspsaude@gmail.com', '(18) 8122-5097'),
-('FORTE SERVICOS LTDA', 'Forte Serviços', '41.603.450/0001-56', 'Limpeza em prédios e domicílios', 'R Uruguai', '352', NULL, 'Jardim Alvorada', 'Lençóis Paulista', 'SP', 'fortecorporativa@gmail.com', '(14) 9677-2180'),
-('ROVERSI SERVICOS LTDA', 'Roversi Serviços', '47.769.234/0001-61', 'Limpeza em prédios e domicílios', 'R Inacio Francisco da Silva', '67', 'Lote 3', 'Centro', 'Reginópolis', 'SP', 'roversiserv@gmail.com', '(14) 9601-3055'),
-('SMG SERVICOS LTDA', 'SMG Serviços', '11.434.059/0001-04', 'Construção de edifícios', 'R Afonso Pena', '623', NULL, 'Centro', 'Itapura', 'SP', 'renovarcont@hotmail.com', '(18) 3745-1314'),
-('VGAF GESTAO DE ATIVOS LTDA', 'VGAF Gestão de Ativos', '57.016.034/0001-91', 'Holdings não-financeiras / Eventos', 'R Uruguai', '350', NULL, 'Jardim Alvorada', 'Lençóis Paulista', 'SP', 'alice.roversi.forte@hotmail.com', '(14) 9677-2180');
+-- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
 -- =============================================
 -- 16. SEED DATA: DEFAULT FINANCIAL CATEGORIES (for each company)

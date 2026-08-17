@@ -126,8 +126,8 @@ BEGIN
      AND NOT (ur.user_id = ANY(COALESCE(_exclude_user_ids, ARRAY[]::uuid[])));
 
   IF _admin_ids IS NOT NULL THEN
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    SELECT unnest(_admin_ids), 'troca_plantao', _title, _message, _link;
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   END IF;
 END$$;
 
@@ -229,13 +229,8 @@ BEGIN
     END IF;
   END IF;
 
-  INSERT INTO public.shift_swap_requests
-    (assignment_id, type, from_user_id, to_user_id, status, notes,
-     counterparty_assignment_id)
-  VALUES
-    (p_assignment_id, p_type, _uid, p_to_user_id, 'aguardando_medico', p_notes,
-     CASE WHEN p_type = 'troca' THEN p_counterparty_assignment_id ELSE NULL END)
-  RETURNING id INTO _request_id;
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   -- marcar plantões como troca_pendente
   UPDATE public.shift_assignments SET status = 'troca_pendente' WHERE id = p_assignment_id;
@@ -245,14 +240,8 @@ BEGIN
 
   -- Notificar contraparte
   SELECT full_name INTO _from_name FROM public.user_profiles WHERE id = _uid;
-  INSERT INTO public.notifications (user_id, type, title, message, link)
-  VALUES (
-    p_to_user_id, 'troca_plantao',
-    CASE WHEN p_type = 'passagem' THEN 'Nova solicitação de passagem'
-         ELSE 'Nova solicitação de troca' END,
-    COALESCE(_from_name,'Um profissional') || ' enviou uma solicitação para você',
-    '/ponto'
-  );
+  -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
   RETURN _request_id;
 END$$;
@@ -299,13 +288,8 @@ BEGIN
 
     SELECT full_name INTO _to_name FROM public.user_profiles WHERE id = _uid;
 
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    VALUES (
-      _req.from_user_id, 'troca_plantao',
-      'Solicitação aceita pelo médico',
-      COALESCE(_to_name,'O profissional') || ' aceitou. Aguardando aprovação do admin.',
-      '/ponto'
-    );
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
     PERFORM public.notify_schedule_admins(
       _company_id,
@@ -328,13 +312,8 @@ BEGIN
     END IF;
 
     SELECT full_name INTO _to_name FROM public.user_profiles WHERE id = _uid;
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    VALUES (
-      _req.from_user_id, 'troca_plantao',
-      'Solicitação recusada',
-      COALESCE(_to_name,'O profissional') || ' recusou sua solicitação.',
-      '/ponto'
-    );
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   END IF;
 END$$;
 
@@ -414,17 +393,12 @@ BEGIN
            executed_at = now()
      WHERE id = p_request_id;
 
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    VALUES
-      (_req.from_user_id, 'troca_plantao', 'Troca aprovada', 'Sua solicitação foi confirmada pelo admin.', '/ponto'),
-      (_req.to_user_id,   'troca_plantao', 'Troca aprovada', 'A solicitação foi confirmada pelo admin.', '/ponto');
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
 
     _recipients := ARRAY[_req.from_user_id, _req.to_user_id];
-    INSERT INTO public.schedule_swap_email_queue
-      (swap_request_id, company_id, event_type, recipient_user_ids)
-    VALUES
-      (p_request_id, _company_id, 'swap_confirmed', _recipients)
-    RETURNING id INTO _queue_id;
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   ELSE
     UPDATE public.shift_assignments SET status = 'confirmado' WHERE id = _req.assignment_id;
     IF _req.counterparty_assignment_id IS NOT NULL THEN
@@ -438,10 +412,8 @@ BEGIN
            admin_responded_at = now()
      WHERE id = p_request_id;
 
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    VALUES
-      (_req.from_user_id, 'troca_plantao', 'Troca recusada pelo admin', COALESCE(p_notes,'A administração recusou a troca.'), '/ponto'),
-      (_req.to_user_id,   'troca_plantao', 'Troca recusada pelo admin', COALESCE(p_notes,'A administração recusou a troca.'), '/ponto');
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   END IF;
 END$$;
 

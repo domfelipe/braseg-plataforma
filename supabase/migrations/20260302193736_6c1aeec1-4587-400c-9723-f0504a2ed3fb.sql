@@ -84,8 +84,8 @@ BEGIN
 
   -- Insert notifications for each user
   IF _user_ids IS NOT NULL THEN
-    INSERT INTO public.notifications (user_id, type, title, message, link)
-    SELECT unnest(_user_ids), _type, _title, _message, '/pagamentos';
+    -- [LGPD] dados de producao removidos na limpeza do fork Braseg
+
   END IF;
 
   RETURN NEW;
