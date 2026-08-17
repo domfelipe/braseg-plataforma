@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { assertClientAccess, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -29,14 +29,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const userId = await requireUserId(req);
     const url = query(req);
-    const companyId = url.get("companyId");
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
-    const clientId = url.get("clientId");
-    if (!clientId) return json(res, { error: "clientId obrigatório" }, 400);
-    await assertClientAccess(clientId, companyId);
 
     if (req.method === "GET") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      const clientId = url.get("clientId");
+      if (!clientId) return json(res, { error: "clientId obrigatório" }, 400);
+      await assertClientAccess(clientId, companyId);
       const rows = await db().query(
         "SELECT id, doc_type, version, status, valid_from, valid_until, catalog_layout_version, generated_at, (docx_blob_url IS NOT NULL) AS has_docx, (pdf_blob_url IS NOT NULL) AS has_pdf FROM seg_documents WHERE client_id = $1 ORDER BY generated_at DESC",
         [clientId]
@@ -46,6 +46,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "POST") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      const clientId = typeof body.clientId === "string" ? body.clientId : url.get("clientId");
+      if (!clientId) return json(res, { error: "clientId obrigatório" }, 400);
+      await assertClientAccess(clientId, companyId);
       const docType = str(body.doc_type, "Tipo de documento obrigatório");
       if (docType !== "pgr" && docType !== "pgrtr") return json(res, { error: "Tipo de documento inválido (pgr | pgrtr)" }, 400);
       const version = str(body.version, "Versão obrigatória");

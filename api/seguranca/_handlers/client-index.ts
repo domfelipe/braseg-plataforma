@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { assertClientAccess, isValidCnpj, optInt, optStr, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -12,11 +12,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = await requireUserId(req);
     const url = query(req);
     const id = new URL(req.url || "/", "http://localhost").pathname.split("/").pop() || "";
-    const companyId = url.get("companyId");
-    if (!id || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
-    await assertCompanyAccess(userId, companyId);
+    if (!id) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
 
     if (req.method === "DELETE") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
       await assertClientAccess(id, companyId);
       await db().query("UPDATE seg_clients SET status = 'arquivado', updated_at = now() WHERE id = $1", [id]);
       return json(res, { ok: true });
@@ -24,6 +25,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "PATCH") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
       const current = await db().query("SELECT * FROM seg_clients WHERE id = $1 AND company_id = $2", [id, companyId]);
       if ((current.rowCount ?? 0) === 0) return json(res, { error: "Empresa cliente não encontrada" }, 404);
       const cur = current.rows[0];
@@ -59,6 +62,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     // GET: cliente + contadores do painel
+    const companyId = url.get("companyId");
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+    await assertCompanyAccess(userId, companyId);
     const clientRes = await db().query("SELECT * FROM seg_clients WHERE id = $1 AND company_id = $2", [id, companyId]);
     if ((clientRes.rowCount ?? 0) === 0) return json(res, { error: "Empresa cliente não encontrada" }, 404);
 

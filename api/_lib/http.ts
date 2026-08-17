@@ -53,3 +53,19 @@ export function handleError(res: ServerResponse, e: unknown): void {
 export function required(value: unknown, message: string): asserts value {
   if (value === undefined || value === null || value === "") throw new HttpError(400, message);
 }
+
+/**
+ * Extrai companyId do body JSON (POST/PATCH/PUT) ou da query string (GET/DELETE).
+ * O frontend envia companyId no body para mutações e na query para leituras;
+ * esta função unifica os dois padrões.
+ */
+export async function resolveCompanyId(
+  req: IncomingMessage,
+  body?: Record<string, unknown>,
+): Promise<string> {
+  // Prioriza body (mutações), depois query string (leituras)
+  if (body && typeof body.companyId === "string" && body.companyId) return body.companyId;
+  const fromQuery = query(req).get("companyId");
+  if (fromQuery) return fromQuery;
+  throw new HttpError(400, "companyId obrigatório");
+}

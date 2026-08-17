@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { isValidCnpj, optInt, optStr, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -10,11 +10,11 @@ export const config = { runtime: "nodejs" };
 export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
     const userId = await requireUserId(req);
-    const companyId = query(req).get("companyId");
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
 
     if (req.method === "GET") {
+      const companyId = query(req).get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
       const rows = await db().query(
         `SELECT id, razao_social, cnpj, grau_risco, n_funcionarios, responsavel, atividade_principal, status, updated_at
          FROM seg_clients WHERE company_id = $1 AND status = 'ativo' ORDER BY razao_social`,
@@ -25,6 +25,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "POST") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
       const razaoSocial = str(body.razao_social, "Razão social é obrigatória");
       const cnpj = str(body.cnpj, "CNPJ é obrigatório").replace(/\D/g, "");
       if (!isValidCnpj(cnpj)) return json(res, { error: "CNPJ inválido" }, 400);

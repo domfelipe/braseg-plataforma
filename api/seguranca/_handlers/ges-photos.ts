@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -15,17 +15,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = await requireUserId(req);
     const url = query(req);
     const gesId = new URL(req.url || "/", "http://localhost").pathname.split("/photos")[0].split("/").pop() || "";
-    const companyId = url.get("companyId");
-    if (!gesId || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
-    await assertCompanyAccess(userId, companyId);
-
-    const ges = await db().query("SELECT * FROM seg_ges WHERE id = $1", [gesId]);
-    if ((ges.rowCount ?? 0) === 0) return json(res, { error: "GES não encontrado" }, 404);
-    const clientId = ges.rows[0].client_id;
-    const owner = await db().query("SELECT 1 FROM seg_clients WHERE id = $1 AND company_id = $2 AND status = 'ativo'", [clientId, companyId]);
-    if ((owner.rowCount ?? 0) === 0) return json(res, { error: "Sem acesso a este GES" }, 403);
+    if (!gesId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
 
     if (req.method === "GET") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      const ges = await db().query("SELECT * FROM seg_ges WHERE id = $1", [gesId]);
+      if ((ges.rowCount ?? 0) === 0) return json(res, { error: "GES não encontrado" }, 404);
+      const clientId = ges.rows[0].client_id;
+      const owner = await db().query("SELECT 1 FROM seg_clients WHERE id = $1 AND company_id = $2 AND status = 'ativo'", [clientId, companyId]);
+      if ((owner.rowCount ?? 0) === 0) return json(res, { error: "Sem acesso a este GES" }, 403);
       const rows = await db().query(
         "SELECT id, blob_url, caption, created_at FROM seg_ges_photos WHERE ges_id = $1 ORDER BY created_at",
         [gesId]
@@ -35,6 +35,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "POST") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      const ges = await db().query("SELECT * FROM seg_ges WHERE id = $1", [gesId]);
+      if ((ges.rowCount ?? 0) === 0) return json(res, { error: "GES não encontrado" }, 404);
+      const clientId = ges.rows[0].client_id;
+      const owner = await db().query("SELECT 1 FROM seg_clients WHERE id = $1 AND company_id = $2 AND status = 'ativo'", [clientId, companyId]);
+      if ((owner.rowCount ?? 0) === 0) return json(res, { error: "Sem acesso a este GES" }, 403);
       const dataUrl = str(body.data_url, "Foto obrigatória");
       if (!dataUrl.startsWith("data:image/")) return json(res, { error: "Formato de imagem inválido" }, 400);
       const approxBytes = Math.ceil((dataUrl.length - dataUrl.indexOf(",") - 1) * 3 / 4);
@@ -64,6 +71,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "DELETE") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
       const photoId = url.get("photoId");
       if (!photoId) return json(res, { error: "photoId obrigatório" }, 400);
       const photo = await db().query("SELECT * FROM seg_ges_photos WHERE id = $1 AND ges_id = $2", [photoId, gesId]);

@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { assertClientAccess, classifyRisk, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -12,12 +12,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = await requireUserId(req);
     const url = query(req);
     const id = new URL(req.url || "/", "http://localhost").pathname.split("/inventory")[0].split("/").pop() || "";
-    const companyId = url.get("companyId");
-    if (!id || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
-    await assertCompanyAccess(userId, companyId);
-    await assertClientAccess(id, companyId);
+    if (!id) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
 
     if (req.method === "GET") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const rows = await db().query(
         `SELECT r.id, r.ges_id, r.agent_code, r.frequency, r.severity, r.classification,
                 r.effects, r.existing_measures, r.proposed_measures, r.record_control, r.nr_codes,
@@ -35,6 +36,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "PUT") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const gesId = str(body.ges_id, "GES obrigatório");
       const agentCode = str(body.agent_code, "Agente obrigatório");
 
@@ -78,6 +82,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "DELETE") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const riskId = url.get("riskId");
       if (!riskId) return json(res, { error: "riskId obrigatório" }, 400);
       await db().query("DELETE FROM seg_inventory_risks WHERE id = $1 AND client_id = $2", [riskId, id]);

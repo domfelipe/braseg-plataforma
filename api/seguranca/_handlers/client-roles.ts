@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { assertClientAccess, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -12,12 +12,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = await requireUserId(req);
     const url = query(req);
     const id = new URL(req.url || "/", "http://localhost").pathname.split("/roles")[0].split("/").pop() || "";
-    const companyId = url.get("companyId");
-    if (!id || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
-    await assertCompanyAccess(userId, companyId);
-    await assertClientAccess(id, companyId);
+    if (!id) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
 
     if (req.method === "GET") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const rows = await db().query(
         `SELECT r.id, r.name, r.description, r.sector_id, s.name AS sector_name,
                 COALESCE(array_agg(ra.agent_code) FILTER (WHERE ra.agent_code IS NOT NULL), '{}') AS agent_codes
@@ -34,6 +35,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     if (req.method === "POST") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const name = str(body.name, "Nome do cargo é obrigatório");
       const sectorId = typeof body.sector_id === "string" && body.sector_id !== "" ? body.sector_id : null;
       const inserted = await db().query(
@@ -44,9 +48,12 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "PATCH") {
+      const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const roleId = url.get("roleId");
       if (!roleId) return json(res, { error: "roleId obrigatório" }, 400);
-      const body = await readJson<Record<string, unknown>>(req);
       const exists = await db().query("SELECT * FROM seg_roles WHERE id = $1 AND client_id = $2", [roleId, id]);
       if ((exists.rowCount ?? 0) === 0) return json(res, { error: "Cargo não encontrado" }, 404);
 
@@ -86,6 +93,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "DELETE") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const roleId = url.get("roleId");
       if (!roleId) return json(res, { error: "roleId obrigatório" }, 400);
       await db().query("DELETE FROM seg_roles WHERE id = $1 AND client_id = $2", [roleId, id]);

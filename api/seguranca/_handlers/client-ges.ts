@@ -1,6 +1,6 @@
 import { requireUserId } from "../../_lib/auth.js";
 import { db } from "../../_lib/db.js";
-import { handleError, json, query, readJson } from "../../_lib/http.js";
+import { handleError, json, query, readJson, resolveCompanyId } from "../../_lib/http.js";
 import { assertClientAccess, str } from "../../_lib/seguranca.js";
 import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant.js";
@@ -29,17 +29,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const userId = await requireUserId(req);
     const url = query(req);
     const id = new URL(req.url || "/", "http://localhost").pathname.split("/ges")[0].split("/").pop() || "";
-    const companyId = url.get("companyId");
-    if (!id || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
-    await assertCompanyAccess(userId, companyId);
-    await assertClientAccess(id, companyId);
+    if (!id) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
 
     if (req.method === "GET") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       return json(res, { ges: await listGes(id) });
     }
 
     if (req.method === "POST") {
       const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       if (body.mode !== "auto") return json(res, { error: "Apenas o modo 'auto' é suportado" }, 400);
 
       // Cargos ainda não vinculados a nenhum GES
@@ -107,11 +111,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "PATCH") {
+      const body = await readJson<Record<string, unknown>>(req);
+      const companyId = await resolveCompanyId(req, body);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const gesId = url.get("gesId");
       if (!gesId) return json(res, { error: "gesId obrigatório" }, 400);
       const exists = await db().query("SELECT * FROM seg_ges WHERE id = $1 AND client_id = $2", [gesId, id]);
       if ((exists.rowCount ?? 0) === 0) return json(res, { error: "GES não encontrado" }, 404);
-      const body = await readJson<Record<string, unknown>>(req);
 
       const name = body.name !== undefined ? str(body.name, "Nome do GES é obrigatório") : exists.rows[0].name;
       const activities = body.activities !== undefined ? String(body.activities).trim() : exists.rows[0].activities;
@@ -134,6 +141,10 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "DELETE") {
+      const companyId = url.get("companyId");
+      if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+      await assertCompanyAccess(userId, companyId);
+      await assertClientAccess(id, companyId);
       const gesId = url.get("gesId");
       if (!gesId) return json(res, { error: "gesId obrigatório" }, 400);
       await db().query("DELETE FROM seg_ges WHERE id = $1 AND client_id = $2", [gesId, id]);
