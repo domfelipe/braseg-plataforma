@@ -1,32 +1,46 @@
-import { AlignmentType, Document, HeadingLevel, ImageRun, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from "docx";
+import { AlignmentType, BorderStyle, Document, Footer, HeadingLevel, ImageRun, PageNumber, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType } from "docx";
 import pdfMake from "pdfmake";
 import type { DocumentModel } from "./model.js";
 import { formatDate } from "./model.js";
 
 /**
- * Gerador de documentos PGR/PGRTR — réplica da anatomia dos 20 itens dos
- * documentos reais da Braseg (DINAMI/FISHER/LENÇÓIS), a partir de um modelo
- * de dados único. Renderiza PDF (pdfmake) e DOCX (docx) editável.
+ * Gerador de documentos PGR/PGRTR — design editorial inspirado no material
+ * real da Braseg (navy #002e5a + azul #1f3d9d + âmbar), com capa, sumário,
+ * 20 seções e anexos. Renderiza PDF (pdfmake) e DOCX (docx) a partir do
+ * MESMO modelo de dados.
  */
 
 type Block =
   | { t: "h1"; text: string }
   | { t: "h2"; text: string }
   | { t: "p"; text: string; bold?: boolean; center?: boolean; small?: boolean }
-  | { t: "table"; header: string[]; rows: string[][]; widths?: string[] }
+  | { t: "table"; header: string[]; rows: string[][]; widths?: string[]; style?: "matrix" | "inventory" | "plain" }
   | { t: "img"; dataUrl: string; width: number }
   | { t: "pagebreak" };
 
+const NAVY = "#002e5a";
+const BLUE = "#1f3d9d";
+const AMBER = "#e3a12e";
+const INK = "#1f2937";
+const MUTED = "#5b6572";
+const LINE = "#c9d3e0";
+const ZEBRA = "#f4f7fb";
+const OK = "#1b7a4e";
+const WARN = "#b97e1f";
+const BAD = "#c0392b";
+
 const NOMES = {
   pgr: {
-    titulo: "PGR - PROGRAMA DE GERENCIAMENTO DE RISCOS",
-    sub: "GRO - GERENCIAMENTO DE RISCOS OCUPACIONAIS",
+    titulo: "PGR",
+    completo: "PROGRAMA DE GERENCIAMENTO DE RISCOS",
+    sub: "GERENCIAMENTO DE RISCOS OCUPACIONAIS — GRO",
     nr: "NR-01 | NR-09",
   },
   pgrtr: {
-    titulo: "PGRTR - PROGRAMA DE GERENCIAMENTO DE RISCOS NO TRABALHO RURAL",
+    titulo: "PGRTR",
+    completo: "PROGRAMA DE GERENCIAMENTO DE RISCOS NO TRABALHO RURAL",
     sub: "GERENCIAMENTO DE RISCOS OCUPACIONAIS NO TRABALHO RURAL",
-    nr: "NR 31 – ITEM 31.3",
+    nr: "NR 31 — ITEM 31.3",
   },
 } as const;
 
@@ -59,25 +73,16 @@ const PRIORIDADE = {
   ],
 };
 
+function classificationColor(text: string): string {
+  if (text.startsWith("1")) return OK;
+  if (text.startsWith("2") || text.startsWith("3")) return WARN;
+  return BAD;
+}
+
 function buildSections(m: DocumentModel, signature: string | null): Block[] {
   const N = NOMES[m.tipo];
   const blocks: Block[] = [];
 
-  // Capa
-  blocks.push(
-    { t: "p", text: "", bold: false },
-    { t: "p", text: m.razao_social.toUpperCase(), center: true },
-    { t: "p", text: "", bold: false },
-    { t: "p", text: N.titulo, center: true, bold: true },
-    { t: "p", text: N.sub, center: true },
-    { t: "p", text: N.nr, center: true },
-    { t: "p", text: "", bold: false },
-    { t: "p", text: "DOCUMENTO " + new Date().getFullYear(), center: true, bold: true },
-    { t: "p", text: "Vigência: " + formatDate(m.valid_from) + " a " + formatDate(m.valid_until), center: true, small: true },
-    { t: "pagebreak" }
-  );
-
-  // Sumário
   const sumario = [
     "1 Identificação da empresa",
     "2 Responsáveis pela elaboração",
@@ -106,13 +111,15 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
 
   // 1
   blocks.push({ t: "h1", text: "1 Identificação da empresa" });
-  blocks.push({ t: "p", text: "Razão social: " + m.razao_social });
-  blocks.push({ t: "p", text: "CNPJ: " + m.cnpj });
-  if (m.cnae) blocks.push({ t: "p", text: "CNAE: " + m.cnae });
-  if (m.grau_risco !== null) blocks.push({ t: "p", text: "Grau de risco (NR-04): " + m.grau_risco });
-  blocks.push({ t: "p", text: "Endereço: " + m.endereco_texto });
-  if (m.atividade_principal) blocks.push({ t: "p", text: "Atividade principal: " + m.atividade_principal });
-  if (m.n_funcionarios !== null) blocks.push({ t: "p", text: "Número de funcionários: " + m.n_funcionarios });
+  blocks.push({ t: "table", header: ["Campo", "Informação"], widths: ["30%", "*"], style: "plain", rows: [
+    ["Razão social", m.razao_social],
+    ["CNPJ", m.cnpj],
+    ...(m.cnae ? [["CNAE", m.cnae] as string[]] : []),
+    ...(m.grau_risco !== null ? [["Grau de risco (NR-04)", String(m.grau_risco)] as string[]] : []),
+    ["Endereço", m.endereco_texto],
+    ...(m.atividade_principal ? [["Atividade principal", m.atividade_principal] as string[]] : []),
+    ...(m.n_funcionarios !== null ? [["Número de funcionários", String(m.n_funcionarios)] as string[]] : []),
+  ] });
 
   // 2
   blocks.push({ t: "h1", text: "2 Responsáveis pela elaboração do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") });
@@ -121,11 +128,9 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
 
   // 3
   blocks.push({ t: "h1", text: "3 Histórico de revisões" });
-  blocks.push({
-    t: "table",
-    header: ["Revisão", "Data", "Descrição", "Elaborado por"],
-    rows: [["01", formatDate(m.valid_from), m.revision_note || "Emissão inicial", m.consultor]],
-  });
+  blocks.push({ t: "table", header: ["Revisão", "Data", "Descrição", "Elaborado por"], widths: ["12%", "18%", "*", "30%"], rows: [
+    ["01", formatDate(m.valid_from), m.revision_note || "Emissão inicial", m.consultor],
+  ] });
 
   // 4
   blocks.push({ t: "h1", text: "4 Introdução" });
@@ -143,14 +148,14 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
   blocks.push({ t: "p", text: "O inventário consolidado de riscos encontra-se no Anexo 2 e, por GES, na seção 14." });
   blocks.push({ t: "h2", text: "5.5 Metodologia da Matriz de Risco" });
   blocks.push({ t: "p", text: "Matriz de risco qualitativa 5×5 — probabilidade × severidade:" });
-  blocks.push({ t: "table", header: MATRIX_5X5.header, rows: MATRIX_5X5.rows });
+  blocks.push({ t: "table", header: MATRIX_5X5.header, rows: MATRIX_5X5.rows, style: "matrix" });
   blocks.push({ t: "h2", text: "5.6 Metodologia de Ação" });
   blocks.push({ t: "p", text: "As ações de controle seguem a hierarquia de prevenção: eliminação, substituição, controles de engenharia, controles administrativos e, por último, equipamentos de proteção individual." });
 
   // 6
   blocks.push({ t: "h1", text: "6 Prioridade das Ações de Controle" });
   blocks.push({ t: "h2", text: "6.1 Nível de Risco" });
-  blocks.push({ t: "table", header: PRIORIDADE.header, rows: PRIORIDADE.rows });
+  blocks.push({ t: "table", header: PRIORIDADE.header, rows: PRIORIDADE.rows, widths: ["30%", "*"] });
   blocks.push({ t: "h2", text: "6.2 Registro, Manutenção e Divulgação do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") });
   blocks.push({ t: "p", text: "Este documento é mantido atualizado, divulgado aos trabalhadores e revisado conforme os gatilhos legais (mudança de processo, inadequação de medidas, acidente ou doença do trabalho e mudança de requisito legal)." });
 
@@ -160,15 +165,13 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
 
   // 8
   blocks.push({ t: "h1", text: "8 Resumo dos Riscos e Seus Agentes" });
-  blocks.push({
-    t: "table",
-    header: ["GES", "Setor", "Agentes de risco"],
-    rows: m.ges.map((g) => [g.code + " — " + g.name, g.sector ?? "-", g.agents.map((a) => a.agent).join("; ") || "-"]),
+  blocks.push({ t: "table", header: ["GES", "Setor", "Agentes de risco"], widths: ["35%", "20%", "*"], rows:
+    m.ges.map((g) => [g.code + " — " + g.name, g.sector ?? "-", g.agents.map((a) => a.agent).join("; ") || "-"]),
   });
 
   // 9
   blocks.push({ t: "h1", text: "9 Atribuições e Responsabilidades" });
-  blocks.push({ t: "p", text: "Do empregador: implementar e manter o " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + ", garantir recursos para as medidas de prevenção, informar e capacitar os trabalhadores.", bold: false });
+  blocks.push({ t: "p", text: "Do empregador: implementar e manter o " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + ", garantir recursos para as medidas de prevenção, informar e capacitar os trabalhadores." });
   blocks.push({ t: "p", text: "Dos empregados: cumprir as medidas de prevenção, utilizar corretamente os EPIs e comunicar imediatamente situações de risco." });
   blocks.push({ t: "p", text: "Do treinamento: capacitação periódica sobre os riscos das atividades e as medidas de controle aplicáveis." });
 
@@ -209,9 +212,8 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
     if (gRisks.length === 0) {
       blocks.push({ t: "p", text: "Nenhum risco inventariado para este GES." });
     } else {
-      blocks.push({
-        t: "table",
-        header: ["Agente de risco", "Freq.", "Sev.", "Classificação", "Efeitos", "Medidas existentes", "Medidas propostas", "Registro e controle"],
+      blocks.push({ t: "table", style: "inventory", header: ["Agente de risco", "Freq.", "Sev.", "Classificação", "Efeitos", "Medidas existentes", "Medidas propostas", "Registro e controle"],
+        widths: ["18%", "6%", "6%", "14%", "14%", "14%", "14%", "14%"],
         rows: gRisks.map((r) => [
           r.agent + " (" + r.agent_code + ")",
           r.frequency,
@@ -232,11 +234,8 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
     blocks.push({ t: "p", text: "Nenhum item registrado no plano de ação." });
   } else {
     const statusLabel: Record<string, string> = { pendente: "Pendente", em_andamento: "Em andamento", concluido: "Concluído" };
-    blocks.push({
-      t: "table",
-      header: ["Descrição", "Origem", "Responsável", "Prazo", "Status"],
-      rows: m.plan.map((p) => [p.description, p.origin ?? "-", p.responsible ?? "-", p.deadline ?? "-", statusLabel[p.status] ?? p.status]),
-    });
+    blocks.push({ t: "table", header: ["Descrição", "Origem", "Responsável", "Prazo", "Status"], widths: ["*", "22%", "16%", "12%", "14%"],
+      rows: m.plan.map((p) => [p.description, p.origin ?? "-", p.responsible ?? "-", p.deadline ?? "-", statusLabel[p.status] ?? p.status]) });
   }
 
   // 16
@@ -249,12 +248,12 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
   blocks.push({ t: "h1", text: "17 Encerramento" });
   blocks.push({ t: "p", text: "Declaramos que este " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + " reflete o inventário de riscos ocupacionais da organização na data de sua emissão e que as medidas nele previstas serão implementadas e monitoradas conforme o plano de ação." });
   if (signature) {
-    blocks.push({ t: "img", dataUrl: signature, width: 180 });
+    blocks.push({ t: "img", dataUrl: signature, width: 170 });
   }
   blocks.push({ t: "p", text: "_______________________________________", bold: false });
-  blocks.push({ t: "p", text: m.responsavel ?? m.razao_social });
-  blocks.push({ t: "p", text: "Responsável pela organização" });
-  blocks.push({ t: "p", text: "Elaborado por: " + m.consultor + " · " + formatDate(m.valid_from) });
+  blocks.push({ t: "p", text: m.responsavel ?? m.razao_social, bold: true });
+  blocks.push({ t: "p", text: "Responsável pela organização", small: true });
+  blocks.push({ t: "p", text: "Elaborado por: " + m.consultor + " · " + formatDate(m.valid_from), small: true });
 
   // 18
   blocks.push({ t: "h1", text: "18 Anexo 1 - Validade do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + " perante a " + (m.tipo === "pgrtr" ? "NR 31" : "NR 01") });
@@ -265,9 +264,9 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
   if (m.risks.length === 0) {
     blocks.push({ t: "p", text: "Inventário vazio." });
   } else {
-    blocks.push({
-      t: "table",
+    blocks.push({ t: "table", style: "inventory",
       header: ["GES", "RISCO", "FREQUENCIA", "SEVERIDADE", "CLASSIFICAÇÃO", "EFEITOS", "MEDIDAS DE PROTEÇÃO EXISTENTES", "MEDIDAS DE PROTEÇÃO PROPOSTAS", "FORMA DE REGISTRO E CONTROLE"],
+      widths: ["16%", "16%", "8%", "8%", "12%", "12%", "12%", "12%", "12%"],
       rows: m.risks.map((r) => [
         r.ges_code + " — " + r.ges_name,
         r.agent + (r.agent_code ? " (e-Social " + r.agent_code + ")" : ""),
@@ -289,7 +288,78 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
   return blocks;
 }
 
-// ---------------------------------------------------------------- PDF (pdfmake)
+// ------------------------------------------------------------------ PDF
+
+function coverPdf(m: DocumentModel): unknown[] {
+  const N = NOMES[m.tipo];
+  return [
+    { text: "DOMHubs · Segurança do Trabalho", fontSize: 9, color: MUTED, alignment: "center", margin: [0, 60, 0, 0], characterSpacing: 2 },
+    { text: m.razao_social.toUpperCase(), fontSize: 15, bold: true, color: NAVY, alignment: "center", margin: [0, 30, 0, 0] },
+    {
+      table: { widths: ["*"], body: [[{ text: "", fillColor: AMBER, margin: [0, 0, 0, 0] }]] },
+      layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0.6, paddingBottom: () => 0.6 },
+      margin: [150, 18, 150, 0],
+    },
+    { text: N.completo, fontSize: 22, bold: true, color: BLUE, alignment: "center", margin: [0, 28, 0, 0] },
+    { text: N.sub, fontSize: 11, color: INK, alignment: "center", margin: [0, 6, 0, 0] },
+    { text: N.nr, fontSize: 10, bold: true, color: AMBER, alignment: "center", margin: [0, 4, 0, 0] },
+    {
+      text: "DOCUMENTO " + new Date().getFullYear(),
+      fontSize: 14,
+      bold: true,
+      color: "#ffffff",
+      alignment: "center",
+      fillColor: NAVY,
+      margin: [120, 46, 120, 0],
+    },
+    { text: "Vigência: " + formatDate(m.valid_from) + " a " + formatDate(m.valid_until), fontSize: 10, color: MUTED, alignment: "center", margin: [0, 10, 0, 0] },
+    { text: "Elaborado por: " + m.consultor, fontSize: 9, color: MUTED, alignment: "center", margin: [0, 120, 0, 0] },
+    { text: "", pageBreak: "after", fontSize: 1 },
+  ];
+}
+
+function cellPdf(text: string, opts: { header?: boolean; zebra?: boolean; align?: "left" | "center"; color?: string; bold?: boolean } = {}): Record<string, unknown> {
+  const fill = opts.header ? NAVY : opts.zebra ? ZEBRA : undefined;
+  const out: Record<string, unknown> = { text, style: opts.header ? "th" : "td" };
+  if (fill) out.fillColor = fill;
+  if (opts.color) out.color = opts.color;
+  if (opts.bold) out.bold = true;
+  if (opts.align === "center") out.alignment = "center";
+  return out;
+}
+
+function tablePdf(b: Extract<Block, { t: "table" }>): unknown {
+  const body: unknown[][] = [b.header.map((h) => cellPdf(h, { header: true }))];
+  b.rows.forEach((row, ri) => {
+    body.push(
+      row.map((cellText, ci) => {
+        const isClassificationCol = b.header[ci] === "Classificação" || b.header[ci] === "CLASSIFICAÇÃO";
+        const isMatrixCell = b.style === "matrix" && ci > 0;
+        return cellPdf(cellText, {
+          zebra: ri % 2 === 1,
+          align: b.style === "matrix" && ci > 0 ? "center" : ci >= 1 && ci <= 3 ? "center" : "left",
+          color: isClassificationCol || isMatrixCell ? classificationColor(cellText) : undefined,
+          bold: isClassificationCol,
+        });
+      })
+    );
+  });
+  const widths: string[] = b.widths ?? Array(b.header.length).fill("*");
+  return {
+    table: { headerRows: 1, widths, body },
+    layout: {
+      hLineWidth: () => 0.5,
+      vLineWidth: () => 0.5,
+      hLineColor: () => LINE,
+      vLineColor: () => LINE,
+      paddingLeft: () => 4,
+      paddingRight: () => 4,
+      paddingTop: () => 3.5,
+      paddingBottom: () => 3.5,
+    },
+    margin: [0, 6, 0, 10],
+  };
+}
 
 function toPdf(m: DocumentModel, signature: string | null): Promise<Buffer> {
   const blocks = buildSections(m, signature);
@@ -297,85 +367,111 @@ function toPdf(m: DocumentModel, signature: string | null): Promise<Buffer> {
 
   for (const b of blocks) {
     if (b.t === "h1") {
-      content.push({ text: b.text, style: "h1", pageBreak: b.text === "SUMÁRIO" ? undefined : undefined });
-      if (["4 Introdução", "5 Identificação", "6 Prioridade das Ações de Controle", "7 Definições", "8 Resumo dos Riscos e Seus Agentes", "9 Atribuições e Responsabilidades", "10 Metodologia do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR"), "11 Avaliações Ambientais", "12 Grupos de Exposição Similar (GES)", "13 Período de Vigência", "14 CARACTERIZAÇÃO GES", "15 Plano de Ação", "16 Referências Bibliográficas", "17 Encerramento", "18 Anexo 1 - Validade do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + " perante a " + (m.tipo === "pgrtr" ? "NR 31" : "NR 01"), "19 Anexo 2 – Matriz de Risco & Inventário de Risco", "20 Anexo 3 – Avaliações ambientais"].includes(b.text)) {
+      content.push({ text: b.text, style: "h1", border: [false, false, false, true], borderColor: [NAVY, NAVY, NAVY, NAVY] });
+      if (["4 Introdução", "14 CARACTERIZAÇÃO GES", "18 Anexo 1 - Validade do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + " perante a " + (m.tipo === "pgrtr" ? "NR 31" : "NR 01")].includes(b.text)) {
         content.push({ text: "", pageBreak: "before", fontSize: 1 });
       }
     } else if (b.t === "h2") {
       content.push({ text: b.text, style: "h2" });
     } else if (b.t === "p") {
-      content.push({ text: b.text, style: b.center ? "center" : b.small ? "small" : "normal", bold: b.bold ?? false, alignment: b.center ? "center" : undefined });
+      content.push({ text: b.text, style: b.center ? "center" : b.small ? "small" : "normal", bold: b.bold ?? false });
     } else if (b.t === "table") {
-      content.push({
-        table: {
-          headerRows: 1,
-          widths: b.widths ?? Array(b.header.length).fill("*"),
-          body: [b.header.map((h) => ({ text: h, style: "th" })), ...b.rows.map((r) => r.map((c) => ({ text: c, style: "td" })))],
-        },
-        layout: {
-          hLineWidth: () => 0.5,
-          vLineWidth: () => 0.5,
-          hLineColor: () => "#9aa4b2",
-          vLineColor: () => "#9aa4b2",
-          paddingLeft: () => 4,
-          paddingRight: () => 4,
-          paddingTop: () => 3,
-          paddingBottom: () => 3,
-        },
-        margin: [0, 4, 0, 8],
-      });
+      content.push(tablePdf(b));
     } else if (b.t === "img") {
-      content.push({ image: b.dataUrl, width: b.width, alignment: "left", margin: [0, 8, 0, 4] });
+      content.push({ image: b.dataUrl, width: b.width, margin: [0, 10, 0, 4] });
     } else if (b.t === "pagebreak") {
       content.push({ text: "", pageBreak: "after", fontSize: 1 });
     }
   }
 
-  // pdfmake 0.3: instância singleton no Node (js/index.js) — fontes padrão PDF
-  pdfMake.setUrlAccessPolicy(() => false); // sem downloads remotos
-  pdfMake.setLocalAccessPolicy(() => true); // imagens apenas via data URLs
+  pdfMake.setUrlAccessPolicy(() => false);
+  pdfMake.setLocalAccessPolicy(() => true);
   pdfMake.setFonts({
-    Roboto: {
-      normal: "Helvetica",
-      bold: "Helvetica-Bold",
-      italics: "Helvetica-Oblique",
-      bolditalics: "Helvetica-BoldOblique",
-    },
+    Roboto: { normal: "Helvetica", bold: "Helvetica-Bold", italics: "Helvetica-Oblique", bolditalics: "Helvetica-BoldOblique" },
   });
 
   const docDefinition = {
     pageSize: "A4" as const,
-    pageMargins: [40, 48, 40, 48],
+    pageMargins: [42, 52, 42, 52],
+    header: (currentPage: number) =>
+      currentPage > 2
+        ? {
+            columns: [
+              { text: NOMES[m.tipo].titulo + " — " + m.razao_social, fontSize: 7.5, color: MUTED, margin: [42, 22, 0, 0] },
+              { text: formatDate(m.valid_from), fontSize: 7.5, color: MUTED, alignment: "right", margin: [0, 22, 42, 0] },
+            ],
+          }
+        : undefined,
     footer: (currentPage: number, pageCount: number) => ({
-      text: currentPage + " / " + pageCount,
-      alignment: "center" as const,
-      fontSize: 8,
-      color: "#666",
-      margin: [0, 12, 0, 0],
+      columns: [
+        { text: "Documento gerado pela plataforma DOMHubs", fontSize: 7, color: MUTED, margin: [42, 8, 0, 0] },
+        { text: currentPage + " / " + pageCount, fontSize: 8, bold: true, color: NAVY, alignment: "right", margin: [0, 8, 42, 0] },
+      ],
     }),
-    content,
+    content: [...coverPdf(m), ...content],
     styles: {
-      h1: { fontSize: 13, bold: true, color: "#002e5a", margin: [0, 12, 0, 4] },
-      h2: { fontSize: 11, bold: true, color: "#1f3d9d", margin: [0, 8, 0, 2] },
-      normal: { fontSize: 10, margin: [0, 2, 0, 2] },
-      small: { fontSize: 9, margin: [0, 1, 0, 1], color: "#333" },
-      center: { fontSize: 11, margin: [0, 6, 0, 6], alignment: "center" },
-      th: { fontSize: 8.5, bold: true, color: "#ffffff", fillColor: "#002e5a" },
-      td: { fontSize: 8.5, color: "#222" },
+      h1: { fontSize: 12.5, bold: true, color: NAVY, margin: [0, 14, 0, 6] },
+      h2: { fontSize: 10.5, bold: true, color: BLUE, margin: [0, 9, 0, 3] },
+      normal: { fontSize: 9.5, lineHeight: 1.35, color: INK, margin: [0, 2, 0, 3], alignment: "justify" },
+      small: { fontSize: 9, lineHeight: 1.3, color: INK, margin: [0, 1, 0, 1] },
+      center: { fontSize: 10, margin: [0, 6, 0, 6], alignment: "center" },
+      th: { fontSize: 8, bold: true, color: "#ffffff" },
+      td: { fontSize: 8, color: INK },
     },
-    defaultStyle: { font: "Roboto", fontSize: 10, color: "#222" },
+    defaultStyle: { font: "Roboto", fontSize: 9.5, color: INK },
   };
 
   const pdfDoc = pdfMake.createPdf(docDefinition);
   return pdfDoc.getBuffer();
 }
 
-// ---------------------------------------------------------------- DOCX (docx)
+// ------------------------------------------------------------------ DOCX
 
-function cell(text: string, bold = false): TableCell {
+function cellDocx(text: string, opts: { header?: boolean; zebra?: boolean; align?: "center" | "left"; color?: string; bold?: boolean } = {}): TableCell {
   return new TableCell({
+    shading: opts.header
+      ? { type: ShadingType.CLEAR, fill: NAVY.slice(1) }
+      : opts.zebra
+        ? { type: ShadingType.CLEAR, fill: ZEBRA.slice(1) }
+        : undefined,
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 40, bottom: 40, left: 80, right: 80 },
+    children: [
+      new Paragraph({
+        alignment: opts.align === "center" ? AlignmentType.CENTER : AlignmentType.LEFT,
+        children: [
+          new TextRun({
+            text,
+            size: 16,
+            bold: opts.header || opts.bold,
+            color: opts.header ? "FFFFFF" : opts.color ?? "1F2937",
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+function tableDocx(b: Extract<Block, { t: "table" }>): Table {
+  return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
-    children: [new Paragraph({ children: [new TextRun({ text, bold, size: 18, font: "Inter" })], spacing: { after: 20 } })],
+    rows: [
+      new TableRow({ tableHeader: true, children: b.header.map((h) => cellDocx(h, { header: true })) }),
+      ...b.rows.map((row, ri) =>
+        new TableRow({
+          children: row.map((cellText, ci) => {
+            const isClassificationCol = b.header[ci] === "Classificação" || b.header[ci] === "CLASSIFICAÇÃO";
+            const isMatrixCell = b.style === "matrix" && ci > 0;
+            return cellDocx(cellText, {
+              zebra: ri % 2 === 1,
+              align: b.style === "matrix" && ci > 0 ? "center" : ci >= 1 && ci <= 3 ? "center" : "left",
+              color: isClassificationCol || isMatrixCell ? classificationColor(cellText) : undefined,
+              bold: isClassificationCol,
+            });
+          }),
+        })
+      ),
+    ],
   });
 }
 
@@ -383,30 +479,101 @@ async function toDocx(m: DocumentModel, signature: string | null): Promise<Buffe
   const blocks = buildSections(m, signature);
   const children: (Paragraph | Table)[] = [];
 
+  // Capa
+  children.push(
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2800, after: 0 }, children: [new TextRun({ text: "DOMHubs · Segurança do Trabalho", size: 18, color: "5B6572", characterSpacing: 24 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 420, after: 0 }, children: [new TextRun({ text: m.razao_social.toUpperCase(), size: 30, bold: true, color: NAVY.slice(1) })] }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 300, after: 0 },
+      border: { bottom: { color: AMBER.slice(1), space: 8, style: BorderStyle.SINGLE, size: 12 } },
+      children: [new TextRun({ text: " ", size: 2 })],
+    }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 420, after: 0 }, children: [new TextRun({ text: NOMES[m.tipo].completo, size: 40, bold: true, color: BLUE.slice(1) })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 140, after: 0 }, children: [new TextRun({ text: NOMES[m.tipo].sub, size: 22, color: "1F2937" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 80, after: 0 }, children: [new TextRun({ text: NOMES[m.tipo].nr, size: 20, bold: true, color: "B97E1F" })] }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 700, after: 0 },
+      shading: { type: ShadingType.CLEAR, fill: NAVY.slice(1) },
+      children: [new TextRun({ text: "DOCUMENTO " + new Date().getFullYear(), size: 26, bold: true, color: "FFFFFF" })],
+    }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 240, after: 0 }, children: [new TextRun({ text: "Vigência: " + formatDate(m.valid_from) + " a " + formatDate(m.valid_until), size: 20, color: "5B6572" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2600, after: 0 }, children: [new TextRun({ text: "Elaborado por: " + m.consultor, size: 18, color: "5B6572" })] }),
+    new Paragraph({ pageBreakBefore: true, children: [] })
+  );
+
   for (const b of blocks) {
     if (b.t === "h1") {
-      children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun({ text: b.text, bold: true, color: "002E5A" })], pageBreakBefore: children.length > 0 && b.text !== "SUMÁRIO" ? true : false, spacing: { before: 200, after: 120 } }));
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_1,
+          pageBreakBefore: ["4 Introdução", "14 CARACTERIZAÇÃO GES", "18 Anexo 1 - Validade do " + (m.tipo === "pgrtr" ? "PGRTR" : "PGR") + " perante a " + (m.tipo === "pgrtr" ? "NR 31" : "NR 01")].includes(b.text),
+          spacing: { before: 220, after: 120 },
+          border: { bottom: { color: NAVY.slice(1), space: 4, style: BorderStyle.SINGLE, size: 8 } },
+          children: [new TextRun({ text: b.text, bold: true, color: NAVY.slice(1), size: 25 })],
+        })
+      );
     } else if (b.t === "h2") {
-      children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun({ text: b.text, bold: true, color: "1F3D9D" })], spacing: { before: 140, after: 60 } }));
+      children.push(
+        new Paragraph({
+          heading: HeadingLevel.HEADING_2,
+          spacing: { before: 160, after: 60 },
+          children: [new TextRun({ text: b.text, bold: true, color: BLUE.slice(1), size: 21 })],
+        })
+      );
     } else if (b.t === "p") {
-      children.push(new Paragraph({ alignment: b.center ? AlignmentType.CENTER : AlignmentType.JUSTIFIED, children: [new TextRun({ text: b.text, bold: b.bold ?? false, size: b.small ? 18 : 20, font: "Inter" })], spacing: { after: 80 } }));
+      children.push(
+        new Paragraph({
+          alignment: b.center ? AlignmentType.CENTER : AlignmentType.JUSTIFIED,
+          spacing: { after: 80 },
+          children: [new TextRun({ text: b.text, bold: b.bold ?? false, size: b.small ? 18 : 20, color: "1F2937" })],
+        })
+      );
     } else if (b.t === "table") {
-      children.push(new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-          new TableRow({ tableHeader: true, children: b.header.map((h) => cell(h, true)) }),
-          ...b.rows.map((r) => new TableRow({ children: r.map((c) => cell(c)) })),
-        ],
-      }));
+      children.push(tableDocx(b));
       children.push(new Paragraph({ children: [], spacing: { after: 120 } }));
     } else if (b.t === "img") {
-      children.push(new Paragraph({ children: [new ImageRun({ data: Buffer.from(signatureImageBytes(b.dataUrl)), transformation: { width: b.width, height: Math.round(b.width * 0.4) }, type: "jpg" })], spacing: { after: 80 } }));
+      children.push(
+        new Paragraph({
+          spacing: { before: 120, after: 80 },
+          children: [
+            new ImageRun({
+              data: Buffer.from(signatureImageBytes(b.dataUrl)),
+              transformation: { width: b.width, height: Math.round(b.width * 0.4) },
+              type: "png",
+            }),
+          ],
+        })
+      );
+    } else if (b.t === "pagebreak") {
+      children.push(new Paragraph({ pageBreakBefore: true, children: [] }));
     }
   }
 
   const doc = new Document({
-    styles: { default: { document: { run: { font: "Inter", size: 20 } } } },
-    sections: [{ children }],
+    styles: { default: { document: { run: { size: 20, color: "1F2937" } } } },
+    sections: [
+      {
+        properties: { page: { margin: { top: 850, bottom: 850, left: 900, right: 900 } } },
+        footers: {
+          default: new Footer({
+            children: [
+              new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [
+                  new TextRun({ text: "Documento gerado pela plataforma DOMHubs · ", size: 14, color: "5B6572" }),
+                  new TextRun({ children: [PageNumber.CURRENT], size: 14, bold: true, color: NAVY.slice(1) }),
+                  new TextRun({ text: " / ", size: 14, color: "5B6572" }),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 14, color: "5B6572" }),
+                ],
+              }),
+            ],
+          }),
+        },
+        children,
+      },
+    ],
   });
   return Packer.toBuffer(doc);
 }
