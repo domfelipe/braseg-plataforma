@@ -30,7 +30,7 @@ export default function Seguranca() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-accent shadow-lg shadow-amber-500/20">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl gradient-accent shadow-lg shadow-blue-900/20">
               <ShieldCheck className="h-6 w-6 text-[#17233F]" strokeWidth={1.75} />
             </div>
             <Badge className="h-6 border-0 bg-primary/15 px-2.5 text-xs font-semibold text-primary">Em breve</Badge>

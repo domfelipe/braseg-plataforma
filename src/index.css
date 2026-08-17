@@ -10,101 +10,103 @@
  */
 @layer base {
   :root {
-    /* Superfícies (branco puro — o âmbar carrega o calor) */
-    --background: 0 0% 100%;            /* #FFFFFF */
-    --foreground: 0 0% 12%;             /* #1F1F1F */
+    /* Superfícies */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 12%;
+    --card-foreground: 0 0% 20%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 12%;
+    --popover-foreground: 0 0% 20%;
 
-    /* Âmbar-mel (primária) — texto navy sobre âmbar para contraste AA */
-    --primary: 38 76% 53%;              /* #E3A12E */
-    --primary-foreground: 222 46% 17%;  /* #17233F */
+    /* Primária: azul vibrante Braseg (#1f3d9d) p/ CTAs e estados ativos */
+    --primary: 226 67% 37%;
+    --primary-foreground: 0 0% 100%;
+    --primary-strong: 209 100% 18%;
+    --primary-soft: 210 24% 93%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 46% 17%;
+    /* Accent: azul-aço Braseg (#647f9c) */
+    --accent: 211 22% 50%;
+    --accent-foreground: 0 0% 100%;
+    --accent-deep: 209 100% 18%;
+    --accent-ink: 0 0% 100%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 0 0% 47%;       /* #787878 */
+    --muted: 210 20% 96%;
+    --muted-foreground: 211 10% 46%;
 
-    /* Navy (accent) — botões primários, foco estrutural */
-    --accent: 222 48% 23%;              /* #1F3057 */
-    --accent-foreground: 218 44% 96%;   /* #F2F5FA */
-
-    --destructive: 6 64% 46%;           /* #C0392B */
+    --destructive: 0 64% 46%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 64% 29%;             /* #1B7A4E */
+    --success: 117 49% 39%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 222 46% 17%;
+    --warning-foreground: 209 100% 18%;
 
-    --info: 222 60% 50%;
+    --info: 211 22% 50%;
     --info-foreground: 0 0% 100%;
 
-    --border: 0 0% 89%;                 /* #E4E4E4 */
-    --input: 0 0% 89%;
-    --ring: 38 76% 53%;                 /* anel de foco âmbar */
+    --border: 210 16% 90%;
+    --input: 210 16% 90%;
+    --ring: 226 67% 37%;
 
-    --radius: 0.625rem;                 /* 10px */
+    --radius: 0.625rem;
 
-    /* Sidebar navy profundo */
-    --sidebar-background: 222 46% 17%;  /* #17233F */
-    --sidebar-foreground: 218 44% 96%;
-    --sidebar-primary: 38 76% 53%;
-    --sidebar-primary-foreground: 222 46% 17%;
-    --sidebar-accent: 222 40% 22%;
-    --sidebar-accent-foreground: 218 44% 96%;
-    --sidebar-border: 222 40% 24%;
-    --sidebar-ring: 38 76% 53%;
+    /* Sidebar: azul-marinho Braseg (#002e5a) */
+    --sidebar-background: 209 100% 18%;
+    --sidebar-foreground: 210 20% 92%;
+    --sidebar-primary: 226 67% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 209 60% 24%;
+    --sidebar-accent-foreground: 210 20% 95%;
+    --sidebar-border: 209 50% 26%;
+    --sidebar-ring: 226 67% 55%;
   }
 
   .dark {
-    --background: 0 0% 7%;              /* #111111 */
-    --foreground: 0 0% 96%;
-    --card: 0 0% 13%;
-    --card-foreground: 0 0% 96%;
-    --popover: 0 0% 13%;
-    --popover-foreground: 0 0% 96%;
+    --background: 209 100% 8%;
+    --foreground: 210 20% 93%;
+    --card: 209 60% 12%;
+    --card-foreground: 210 20% 93%;
+    --popover: 209 60% 12%;
+    --popover-foreground: 210 20% 93%;
 
-    --primary: 40 76% 56%;
-    --primary-foreground: 222 46% 12%;
+    --primary: 226 55% 49%;
+    --primary-foreground: 0 0% 100%;
+    --primary-strong: 226 67% 37%;
+    --primary-soft: 209 40% 18%;
 
-    --secondary: 0 0% 17%;
-    --secondary-foreground: 0 0% 93%;
+    --accent: 211 22% 58%;
+    --accent-foreground: 0 0% 100%;
+    --accent-deep: 209 100% 10%;
+    --accent-ink: 0 0% 100%;
 
-    --muted: 0 0% 17%;
-    --muted-foreground: 0 0% 68%;
+    --muted: 209 40% 16%;
+    --muted-foreground: 211 15% 62%;
 
-    --accent: 220 40% 40%;
-    --accent-foreground: 218 44% 96%;
-
-    --destructive: 6 62% 42%;
+    --destructive: 0 62% 42%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 55% 35%;
+    --success: 117 45% 42%;
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 55%;
-    --warning-foreground: 222 46% 12%;
+    --warning-foreground: 209 100% 10%;
 
-    --info: 220 60% 60%;
+    --info: 211 22% 58%;
     --info-foreground: 0 0% 100%;
 
-    --border: 0 0% 24%;
-    --input: 0 0% 24%;
-    --ring: 40 76% 56%;
+    --border: 209 30% 22%;
+    --input: 209 30% 22%;
+    --ring: 226 55% 49%;
 
-    --sidebar-background: 222 40% 10%;
-    --sidebar-foreground: 218 30% 85%;
-    --sidebar-primary: 40 76% 56%;
-    --sidebar-primary-foreground: 222 46% 12%;
-    --sidebar-accent: 222 35% 16%;
-    --sidebar-accent-foreground: 218 30% 88%;
-    --sidebar-border: 222 30% 18%;
-    --sidebar-ring: 40 76% 56%;
+    --sidebar-background: 209 100% 10%;
+    --sidebar-foreground: 210 20% 88%;
+    --sidebar-primary: 226 55% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 209 50% 18%;
+    --sidebar-accent-foreground: 210 20% 90%;
+    --sidebar-border: 209 40% 20%;
+    --sidebar-ring: 226 55% 55%;
   }
 }
 
@@ -136,19 +138,19 @@
 
 /* ── Gradientes (identidade Braseg — navy/âmbar, sem arco-íris) ── */
 .gradient-primary {
-  background: linear-gradient(135deg, hsl(222 48% 23%), hsl(222 46% 17%));
+  background: linear-gradient(135deg, hsl(226 67% 37%), hsl(209 100% 18%));
 }
 
 .gradient-accent {
-  background: linear-gradient(135deg, hsl(38 76% 53%), hsl(37 71% 42%));
+  background: linear-gradient(135deg, hsl(211 22% 50%), hsl(209 100% 18%));
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, hsl(152 64% 29%), hsl(160 55% 38%));
+  background: linear-gradient(135deg, hsl(117 49% 39%), hsl(140 45% 45%));
 }
 
 .gradient-destructive {
-  background: linear-gradient(135deg, hsl(6 64% 46%), hsl(15 70% 50%));
+  background: linear-gradient(135deg, hsl(0 64% 46%), hsl(15 70% 50%));
 }
 
 .gradient-warning {
@@ -156,7 +158,7 @@
 }
 
 .gradient-info {
-  background: linear-gradient(135deg, hsl(222 60% 50%), hsl(220 65% 58%));
+  background: linear-gradient(135deg, hsl(211 22% 50%), hsl(220 65% 58%));
 }
 
 .gradient-card-shine {

@@ -1,5 +1,6 @@
 import { SignIn } from "@clerk/clerk-react";
-import { ShieldCheck, Truck, MessageSquare } from "lucide-react";
+import { Truck, MessageSquare, ShieldCheck } from "lucide-react";
+import brasegLogo from "/logos/braseg-branco.png";
 
 export default function Login() {
   return (
@@ -14,17 +15,12 @@ export default function Login() {
             backgroundSize: "48px 48px",
           }}
         />
-        <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-amber-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-blue-400/10 blur-3xl" />
         <div className="pointer-events-none absolute -left-16 bottom-10 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl" />
 
         <div className="relative z-10 flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl gradient-accent shadow-lg shadow-amber-500/20">
-            <ShieldCheck className="h-6 w-6 text-[#17233F]" strokeWidth={1.75} />
-          </div>
-          <div>
-            <p className="font-display text-lg font-bold tracking-tight">BRASEG</p>
-            <p className="text-xs text-white/50">Portal Unificado</p>
-          </div>
+          <img src={brasegLogo} alt="Braseg" className="h-14 w-auto object-contain" />
+          <p className="mt-2 text-xs text-white/50">Portal Unificado</p>
         </div>
 
         <div className="relative z-10 max-w-md">
@@ -44,7 +40,7 @@ export default function Login() {
             ].map(({ icon: Icon, label }) => (
               <div key={label} className="flex items-center gap-3 text-sm text-white/70">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 ring-1 ring-white/10">
-                  <Icon className="h-4 w-4 text-amber-400" strokeWidth={1.75} />
+                  <Icon className="h-4 w-4 text-blue-300" strokeWidth={1.75} />
                 </div>
                 {label}
               </div>

@@ -9,7 +9,7 @@ interface KpiCardProps {
   value: number;
   prefix?: string;
   icon: LucideIcon;
-  tone?: "default" | "amber" | "navy";
+  tone?: "default" | "brand" | "navy";
   loading?: boolean;
 }
 
@@ -32,7 +32,7 @@ export function KpiCard({ label, value, prefix = "", icon: Icon, tone = "default
       <div
         className={cn(
           "pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-2xl",
-          tone === "amber" && "bg-primary/15",
+          tone === "brand" && "bg-primary/15",
           tone === "navy" && "bg-accent/15",
           tone === "default" && "bg-muted"
         )}

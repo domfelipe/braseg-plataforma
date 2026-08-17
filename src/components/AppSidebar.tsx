@@ -1,4 +1,5 @@
-import { Building2, ChevronDown, ExternalLink, LogOut, Settings, User } from "lucide-react";
+import { ChevronDown, ExternalLink, LogOut, Settings, User } from "lucide-react";
+import brasegLogo from "/logos/braseg-branco.png";
 import { NavLink } from "@/components/NavLink";
 import { MODULES } from "@/lib/moduleRegistry";
 import { useCompany } from "@/hooks/useCompany";
@@ -47,9 +48,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="border-b border-sidebar-border px-3 pb-4 pt-4">
         <div className="flex items-center gap-3 px-1 py-1">
-          <div className="h-9 w-9 shrink-0 rounded-xl gradient-accent flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" strokeWidth={1.75} />
-          </div>
+          <img src={brasegLogo} alt="Braseg" className="h-8 w-auto shrink-0 object-contain" />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
               <span className="font-display text-sm font-bold tracking-tight text-sidebar-foreground">BRASEG</span>
@@ -123,7 +122,7 @@ export function AppSidebar() {
                       <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.75} />
                       {!collapsed && <span className="truncate">{mod.label}</span>}
                       {!collapsed && mod.comingSoon && (
-                        <Badge className="ml-auto bg-sidebar-accent text-[10px] px-1.5 py-0 h-4 font-medium text-amber-400/90 border-0">Em breve</Badge>
+                        <Badge className="ml-auto bg-sidebar-accent text-[10px] px-1.5 py-0 h-4 font-medium text-blue-300/90 border-0">Em breve</Badge>
                       )}
                     </NavLink>
                   </SidebarMenuItem>
