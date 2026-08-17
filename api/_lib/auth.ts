@@ -1,19 +1,36 @@
-import { createClerkClient } from "@clerk/backend";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { IncomingMessage } from "http";
 import { HttpError } from "./http";
+import { ensureLocalEnv } from "./env";
 
-let clerk: ReturnType<typeof createClerkClient> | null = null;
+/**
+ * Verificação de sessão do Clerk via JWKS (padrão oficial p/ APIs externas).
+ * O issuer é derivado da publishable key: pk_<base64(slug.clerk.accounts.dev$)>.
+ * O claim azp do token de sessão é a ORIGEM do app — a validação real é a
+ * assinatura + issuer (instância Clerk correta).
+ */
 
-function getClerk() {
-  if (!clerk) {
-    const secretKey = process.env.CLERK_SECRET_KEY;
-    if (!secretKey) throw new HttpError(500, "CLERK_SECRET_KEY não configurada");
-    clerk = createClerkClient({ secretKey });
-  }
-  return clerk;
+function clerkIssuer(): string {
+  ensureLocalEnv();
+  const configured = process.env.CLERK_ISSUER || "";
+  if (configured) return configured.replace(/\/$/, "");
+  const pk = process.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+  if (!pk.startsWith("pk_")) throw new HttpError(500, "CLERK_ISSUER ou VITE_CLERK_PUBLISHABLE_KEY não configurada");
+  const decoded = Buffer.from(pk.slice(8), "base64").toString("utf8");
+  const host = decoded.replace(/\$/, "");
+  return "https://" + host;
 }
 
-/** Valida o Bearer token do Clerk e devolve o user id (sub). */
+let jwksCache: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function jwks() {
+  if (!jwksCache) {
+    jwksCache = createRemoteJWKSet(new URL(clerkIssuer() + "/.well-known/jwks.json"));
+  }
+  return jwksCache;
+}
+
+/** Valida o Bearer token (JWT de sessão do Clerk) e devolve o user id (sub). */
 export async function requireUserId(req: IncomingMessage): Promise<string> {
   const header = req.headers["authorization"];
   if (!header || !header.startsWith("Bearer ")) {
@@ -21,10 +38,11 @@ export async function requireUserId(req: IncomingMessage): Promise<string> {
   }
   const token = header.slice(7);
   try {
-    const sess = await getClerk().sessions.verifySession(token, token);
-    if (!sess.userId) throw new Error("token sem userId");
-    return sess.userId;
-  } catch {
+    const { payload } = await jwtVerify(token, jwks(), { issuer: clerkIssuer() });
+    if (!payload.sub) throw new Error("token sem sub");
+    return payload.sub;
+  } catch (e) {
+    console.error("[auth] falha:", e);
     throw new HttpError(401, "Sessão inválida ou expirada");
   }
 }

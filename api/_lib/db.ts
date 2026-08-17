@@ -1,9 +1,11 @@
 import { Pool } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
+import { ensureLocalEnv } from "./env";
 
 let pool: Pool | null = null;
 
 export function db(): Pool {
+  ensureLocalEnv();
   if (!pool) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,

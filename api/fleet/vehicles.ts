@@ -31,9 +31,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const userId = await requireUserId(req);
     const url = query(req);
-    const companyId = url.get("companyId") || "";
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
+    let companyId = url.get("companyId") || "";
 
     if (req.method === "GET") {
       const q = await db().query(
@@ -43,7 +41,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return json(res, q.rows);
     }
 
-    const body = await readJson<VehiclePayload>(req);
+    let body = {} as VehiclePayload;
+    if (req.method === "POST" || req.method === "PATCH") {
+      body = await readJson<VehiclePayload>(req);
+      const fromBody = (body as unknown as { companyId?: string }).companyId;
+      if (fromBody) companyId = fromBody;
+    }
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+    await assertCompanyAccess(userId, companyId);
 
     if (req.method === "POST") {
       if (!body.plate || !body.brand || !body.model) return json(res, { error: "Placa, marca e modelo são obrigatórios" }, 400);

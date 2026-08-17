@@ -24,9 +24,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const userId = await requireUserId(req);
     const url = query(req);
-    const companyId = url.get("companyId") || "";
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
+    let companyId = url.get("companyId") || "";
 
     if (req.method === "GET") {
       const vehicleId = url.get("vehicleId");
@@ -36,7 +34,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return json(res, q.rows);
     }
 
-    const body = await readJson<Payload>(req);
+    let body = {} as Payload;
+    if (req.method === "POST" || req.method === "PATCH") {
+      body = await readJson<Payload>(req);
+      const fromBody = (body as unknown as { companyId?: string }).companyId;
+      if (fromBody) companyId = fromBody;
+    }
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+    await assertCompanyAccess(userId, companyId);
 
     if (req.method === "POST") {
       if (!body.vehicle_id || !body.description || !body.date) return json(res, { error: "Veículo, descrição e data são obrigatórios" }, 400);

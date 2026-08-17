@@ -45,7 +45,8 @@ function PageLoader() {
 }
 
 function SmartRedirect() {
-  const { userModules } = useCompany();
+  const { userModules, loading } = useCompany();
+  if (loading) return <PageLoader />;
   return <Navigate to={firstAccessibleRoute(userModules)} replace />;
 }
 
@@ -70,6 +71,7 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/login" element={<Login />} />
+                <Route path="/login/*" element={<Login />} />
                 <Route path="/redefinir-senha" element={<RedefinirSenha />} />
                 <Route path="/dashboard" element={<ProtectedApp><Dashboard /></ProtectedApp>} />
                 <Route path="/frotas" element={<ProtectedApp><Frotas /></ProtectedApp>} />
@@ -77,6 +79,7 @@ const App = () => (
                 <Route path="/frotas/inspecoes/:id" element={<ProtectedApp><InspecaoDetalhe /></ProtectedApp>} />
                 <Route path="/seguranca" element={<ProtectedApp><Seguranca /></ProtectedApp>} />
                 <Route path="/perfil" element={<ProtectedApp><Perfil /></ProtectedApp>} />
+                <Route path="/perfil/*" element={<ProtectedApp><Perfil /></ProtectedApp>} />
                 <Route path="/configuracoes" element={<ProtectedApp><Configuracoes /></ProtectedApp>} />
                 <Route path="/" element={<ProtectedApp><SmartRedirect /></ProtectedApp>} />
                 <Route path="*" element={<NotFound />} />

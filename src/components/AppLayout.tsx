@@ -8,12 +8,13 @@ import { useAuth } from "@/hooks/useAuth";
 import { firstAccessibleRoute, moduleForRoute } from "@/lib/moduleRegistry";
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { userModules } = useCompany();
+  const { userModules, loading: companyLoading } = useCompany();
   const { isMaster } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (companyLoading) return; // aguarda /api/me antes de decidir
     if (isMaster) return; // masters têm acesso total
 
     const currentPath = location.pathname;
@@ -25,7 +26,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
     if (!userModules.includes(module.key)) {
       navigate(firstAccessibleRoute(userModules), { replace: true });
     }
-  }, [location.pathname, userModules, isMaster, navigate]);
+  }, [location.pathname, userModules, isMaster, companyLoading, navigate]);
 
   return (
     <SidebarProvider>

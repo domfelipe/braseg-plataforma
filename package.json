@@ -57,6 +57,7 @@
     "framer-motion": "^12.34.3",
     "html5-qrcode": "^2.3.8",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.9",
     "jszip": "^3.10.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.462.0",

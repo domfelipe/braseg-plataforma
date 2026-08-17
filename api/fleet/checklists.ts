@@ -23,9 +23,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const userId = await requireUserId(req);
     const url = query(req);
-    const companyId = url.get("companyId") || "";
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
+    let companyId = url.get("companyId") || "";
 
     if (req.method === "GET") {
       const q = await db().query(
@@ -46,7 +44,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
 
     if (req.method === "POST") {
-      const body = await readJson<CreatePayload>(req);
+      let body = {} as CreatePayload;
+    if (req.method === "POST" || req.method === "PATCH") {
+      body = await readJson<CreatePayload>(req);
+      const fromBody = (body as unknown as { companyId?: string }).companyId;
+      if (fromBody) companyId = fromBody;
+    }
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+    await assertCompanyAccess(userId, companyId);
       if (!body.vehicle_id || !body.template_id || !body.signature_data_url) {
         return json(res, { error: "Veículo, modelo e assinatura são obrigatórios" }, 400);
       }

@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { useAuth as useClerkAuth } from "@clerk/clerk-react";
+import { useAuth as useClerkAuth, useSession } from "@clerk/clerk-react";
 import { api } from "@/integrations/api/client";
 
 interface Company {
@@ -24,13 +24,14 @@ const CompanyContext = createContext<CompanyContextType | null>(null);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const { isSignedIn } = useClerkAuth();
+  const { session } = useSession();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   const [isMaster, setIsMaster] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isSignedIn) {
+    if (!isSignedIn || !session) {
       setCompanies([]);
       setSelectedCompanyId(null);
       setIsMaster(false);
@@ -39,7 +40,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
 
     let cancelled = false;
-    const load = async () => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const load = async (attempt: number) => {
       setLoading(true);
       try {
         const data = await api.get<{ companies: Company[]; isMaster: boolean }>("/me");
@@ -55,17 +58,27 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         if (sorted.length > 0) {
           setSelectedCompanyId((prev) => (prev && sorted.some((c) => c.id === prev) ? prev : sorted[0].id));
         }
-      } catch {
-        if (!cancelled) setCompanies([]);
-      } finally {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
+      } catch (err) {
+        // A sessão Clerk pode ainda não ter token no primeiro instante pós-login:
+        // retenta até 3x antes de desistir.
+        if (!cancelled && attempt < 3) {
+          timer = setTimeout(() => load(attempt + 1), 700);
+          return;
+        }
+        if (!cancelled) {
+          console.error("[useCompany] falha ao carregar /me:", err);
+          setCompanies([]);
+          setLoading(false);
+        }
       }
     };
-    load();
+    load(0);
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
-  }, [isSignedIn]);
+  }, [isSignedIn, session?.id]);
 
   const selectedCompany = companies.find((c) => c.id === selectedCompanyId) || null;
   const userModules = selectedCompany?.modules || [];

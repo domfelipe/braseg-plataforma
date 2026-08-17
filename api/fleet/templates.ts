@@ -27,9 +27,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   try {
     const userId = await requireUserId(req);
     const url = query(req);
-    const companyId = url.get("companyId") || "";
-    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
-    await assertCompanyAccess(userId, companyId);
+    let companyId = url.get("companyId") || "";
 
     if (req.method === "GET") {
       const tplRes = await db().query(
@@ -47,7 +45,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return json(res, tplRes.rows.map((t) => ({ ...t, items: byTemplate[t.id] || [] })));
     }
 
-    const body = await readJson<TemplatePayload>(req);
+    let body = {} as TemplatePayload;
+    if (req.method === "POST" || req.method === "PATCH") {
+      body = await readJson<TemplatePayload>(req);
+      const fromBody = (body as unknown as { companyId?: string }).companyId;
+      if (fromBody) companyId = fromBody;
+    }
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
+    await assertCompanyAccess(userId, companyId);
 
     if (req.method === "POST") {
       if (!body.name || body.name.trim().length < 3) return json(res, { error: "Informe um nome com pelo menos 3 caracteres" }, 400);
