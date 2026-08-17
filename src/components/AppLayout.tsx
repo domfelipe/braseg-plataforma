@@ -4,12 +4,10 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { useCompany } from "@/hooks/useCompany";
-import { useAuth } from "@/hooks/useAuth";
 import { firstAccessibleRoute, moduleForRoute } from "@/lib/moduleRegistry";
 
 export function AppLayout({ children }: { children: ReactNode }) {
-  const { userModules, loading: companyLoading } = useCompany();
-  const { isMaster } = useAuth();
+  const { userModules, loading: companyLoading, isMaster } = useCompany();
   const location = useLocation();
   const navigate = useNavigate();
 
