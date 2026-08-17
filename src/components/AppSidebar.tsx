@@ -149,7 +149,7 @@ export function AppSidebar() {
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-sidebar-foreground">{profile?.full_name || "Usuário"}</p>
-                  <p className="truncate text-[11px] text-sidebar-foreground/50">{isMaster ? "Master · DOMCO" : "Braseg"}</p>
+                  <p className="truncate text-[11px] text-sidebar-foreground/50">{isMaster ? "Master · DOMHubs" : "Braseg"}</p>
                 </div>
               )}
             </button>

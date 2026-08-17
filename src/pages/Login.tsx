@@ -52,7 +52,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="relative z-10 text-xs text-white/30">© {new Date().getFullYear()} Braseg · powered by DOMCO</p>
+        <p className="relative z-10 text-xs text-white/30">© {new Date().getFullYear()} Braseg · powered by DOMHubs</p>
       </div>
 
       {/* Formulário Clerk */}

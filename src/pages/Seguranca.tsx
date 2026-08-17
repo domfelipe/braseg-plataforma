@@ -60,10 +60,10 @@ export default function Seguranca() {
           <div className="mt-8 flex flex-col items-start justify-between gap-4 rounded-[10px] bg-accent p-6 text-accent-foreground sm:flex-row sm:items-center">
             <div>
               <p className="font-display text-sm font-bold">Quer acompanhar o desenvolvimento?</p>
-              <p className="mt-1 text-xs text-accent-foreground/70">Fale com a DOMCO sobre o piloto do app de campo para a Braseg.</p>
+              <p className="mt-1 text-xs text-accent-foreground/70">Fale com a DOMHubs sobre o piloto do app de campo para a Braseg.</p>
             </div>
             <Button variant="accent" className="shrink-0" onClick={() => (window.location.href = "mailto:felipe@domhubs.com.br?subject=Braseg%20Portal%20-%20M%C3%B3dulo%20Seguran%C3%A7a")}>
-              Falar com a DOMCO <ArrowRight className="h-4 w-4" />
+              Falar com a DOMHubs <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
