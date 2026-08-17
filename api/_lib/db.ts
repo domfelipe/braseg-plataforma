@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 import { attachDatabasePool } from "@vercel/functions";
-import { ensureLocalEnv } from "./env";
+import { ensureLocalEnv } from "./env.js";
 
 let pool: Pool | null = null;
 

@@ -1,5 +1,5 @@
-import { db } from "./db";
-import { HttpError } from "./http";
+import { db } from "./db.js";
+import { HttpError } from "./http.js";
 
 export interface CompanyRow {
   id: string;

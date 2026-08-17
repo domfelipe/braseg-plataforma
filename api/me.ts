@@ -1,7 +1,7 @@
-import { requireUserId } from "./_lib/auth";
-import { handleError, json, query } from "./_lib/http";
+import { requireUserId } from "./_lib/auth.js";
+import { handleError, json, query } from "./_lib/http.js";
 import type { IncomingMessage, ServerResponse } from "http";
-import { isMaster, listCompanies } from "./_lib/tenant";
+import { isMaster, listCompanies } from "./_lib/tenant.js";
 
 export const config = { runtime: "nodejs" };
 

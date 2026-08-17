@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { IncomingMessage } from "http";
-import { HttpError } from "./http";
-import { ensureLocalEnv } from "./env";
+import { HttpError } from "./http.js";
+import { ensureLocalEnv } from "./env.js";
 
 /**
  * Verificação de sessão do Clerk via JWKS (padrão oficial p/ APIs externas).
