@@ -1,4 +1,6 @@
 import { AlignmentType, BorderStyle, Document, Footer, HeadingLevel, ImageRun, PageNumber, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, VerticalAlign, WidthType } from "docx";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import pdfMake from "pdfmake";
 import type { DocumentModel } from "./model.js";
 import { formatDate } from "./model.js";
@@ -77,6 +79,16 @@ function classificationColor(text: string): string {
   if (text.startsWith("1")) return OK;
   if (text.startsWith("2") || text.startsWith("3")) return WARN;
   return BAD;
+}
+
+/** Logo oficial da Braseg (dona do documento) — fallback silencioso sem logo. */
+function brasegLogo(): { dataUrl: string; bytes: Uint8Array } | null {
+  try {
+    const bytes = readFileSync(join(__dirname, "braseg-original.png"));
+    return { dataUrl: "data:image/png;base64," + bytes.toString("base64"), bytes };
+  } catch {
+    return null;
+  }
 }
 
 function buildSections(m: DocumentModel, signature: string | null): Block[] {
@@ -292,9 +304,15 @@ function buildSections(m: DocumentModel, signature: string | null): Block[] {
 
 function coverPdf(m: DocumentModel): unknown[] {
   const N = NOMES[m.tipo];
+  const logo = brasegLogo();
   return [
-    { text: "DOMHubs · Segurança do Trabalho", fontSize: 9, color: MUTED, alignment: "center", margin: [0, 60, 0, 0], characterSpacing: 2 },
-    { text: m.razao_social.toUpperCase(), fontSize: 15, bold: true, color: NAVY, alignment: "center", margin: [0, 30, 0, 0] },
+    ...(logo
+      ? [{ image: logo.dataUrl, width: 160, alignment: "center", margin: [0, 40, 0, 0] } as Record<string, unknown>]
+      : []),
+    { text: "BRASEG CONSULTORIA E TREINAMENTOS", fontSize: 9, bold: true, color: NAVY, alignment: "center", margin: [0, 6, 0, 0], characterSpacing: 2 },
+    { text: "Consultoria em Segurança do Trabalho", fontSize: 8.5, color: MUTED, alignment: "center", margin: [0, 2, 0, 0] },
+    { text: "Documento elaborado para", fontSize: 9, color: MUTED, alignment: "center", margin: [0, 34, 0, 0], characterSpacing: 1.5 },
+    { text: m.razao_social.toUpperCase(), fontSize: 15, bold: true, color: NAVY, alignment: "center", margin: [0, 10, 0, 0] },
     {
       table: { widths: ["*"], body: [[{ text: "", fillColor: AMBER, margin: [0, 0, 0, 0] }]] },
       layout: { hLineWidth: () => 0, vLineWidth: () => 0, paddingLeft: () => 0, paddingRight: () => 0, paddingTop: () => 0.6, paddingBottom: () => 0.6 },
@@ -404,7 +422,7 @@ function toPdf(m: DocumentModel, signature: string | null): Promise<Buffer> {
         : undefined,
     footer: (currentPage: number, pageCount: number) => ({
       columns: [
-        { text: "Documento gerado pela plataforma DOMHubs", fontSize: 7, color: MUTED, margin: [42, 8, 0, 0] },
+        { text: "Documento gerado pela plataforma da Braseg Consultoria e Treinamentos", fontSize: 7, color: MUTED, margin: [42, 8, 0, 0] },
         { text: currentPage + " / " + pageCount, fontSize: 8, bold: true, color: NAVY, alignment: "right", margin: [0, 8, 42, 0] },
       ],
     }),
@@ -480,9 +498,21 @@ async function toDocx(m: DocumentModel, signature: string | null): Promise<Buffe
   const children: (Paragraph | Table)[] = [];
 
   // Capa
+  const logo = brasegLogo();
+  if (logo) {
+    children.push(
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 800, after: 0 },
+        children: [new ImageRun({ data: Buffer.from(logo.bytes), transformation: { width: 220, height: 66 }, type: "png" })],
+      })
+    );
+  }
   children.push(
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 2800, after: 0 }, children: [new TextRun({ text: "DOMHubs · Segurança do Trabalho", size: 18, color: "5B6572", characterSpacing: 24 })] }),
-    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 420, after: 0 }, children: [new TextRun({ text: m.razao_social.toUpperCase(), size: 30, bold: true, color: NAVY.slice(1) })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 0 }, children: [new TextRun({ text: "BRASEG CONSULTORIA E TREINAMENTOS", size: 18, bold: true, color: NAVY.slice(1), characterSpacing: 20 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40, after: 0 }, children: [new TextRun({ text: "Consultoria em Segurança do Trabalho", size: 17, color: "5B6572" })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 700, after: 0 }, children: [new TextRun({ text: "Documento elaborado para", size: 18, color: "5B6572", characterSpacing: 16 })] }),
+    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 200, after: 0 }, children: [new TextRun({ text: m.razao_social.toUpperCase(), size: 30, bold: true, color: NAVY.slice(1) })] }),
     new Paragraph({
       alignment: AlignmentType.CENTER,
       spacing: { before: 300, after: 0 },
@@ -562,7 +592,7 @@ async function toDocx(m: DocumentModel, signature: string | null): Promise<Buffe
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [
-                  new TextRun({ text: "Documento gerado pela plataforma DOMHubs · ", size: 14, color: "5B6572" }),
+                  new TextRun({ text: "Documento gerado pela plataforma da Braseg Consultoria e Treinamentos · ", size: 14, color: "5B6572" }),
                   new TextRun({ children: [PageNumber.CURRENT], size: 14, bold: true, color: NAVY.slice(1) }),
                   new TextRun({ text: " / ", size: 14, color: "5B6572" }),
                   new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 14, color: "5B6572" }),
