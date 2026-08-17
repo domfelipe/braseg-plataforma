@@ -1,6 +1,7 @@
 import { requireUserId } from "./_lib/auth";
 import { db } from "./_lib/db";
-import { handleError, json } from "./_lib/http";
+import { handleError, json, query } from "./_lib/http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "./_lib/tenant";
 
 export const config = { runtime: "nodejs" };
@@ -12,12 +13,12 @@ function localDate(d: Date): string {
   return y + "-" + m + "-" + day;
 }
 
-export default async function handler(request: Request) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const userId = await requireUserId(request);
-    const url = new URL(request.url);
-    const companyId = url.searchParams.get("companyId");
-    if (!companyId) return json({ error: "companyId obrigatório" }, 400);
+    const userId = await requireUserId(req);
+    const url = query(req);
+    const companyId = url.get("companyId");
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
     await assertCompanyAccess(userId, companyId);
 
     const today = localDate(new Date());
@@ -31,7 +32,7 @@ export default async function handler(request: Request) {
       db().query("SELECT count(*)::int AS n FROM fleet_checklists WHERE company_id = $1 AND created_at >= $2 AND created_at <= $3", [companyId, today + "T00:00:00", today + "T23:59:59"]),
     ]);
 
-    return json({
+    return json(res, {
       fleet: {
         vehicles: vehicles.rows[0]?.n ?? 0,
         remindersDue30: reminders.rows[0]?.n ?? 0,
@@ -40,6 +41,6 @@ export default async function handler(request: Request) {
       },
     });
   } catch (e) {
-    return handleError(e);
+    return handleError(res, e);
   }
 }

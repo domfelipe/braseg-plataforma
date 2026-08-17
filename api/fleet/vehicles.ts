@@ -1,6 +1,7 @@
 import { requireUserId } from "../_lib/auth";
 import { db } from "../_lib/db";
-import { handleError, json, readJson } from "../_lib/http";
+import { handleError, json, query, readJson } from "../_lib/http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../_lib/tenant";
 
 export const config = { runtime: "nodejs" };
@@ -26,36 +27,36 @@ interface VehiclePayload {
   notes?: string | null;
 }
 
-export default async function handler(request: Request) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const userId = await requireUserId(request);
-    const url = new URL(request.url);
-    const companyId = url.searchParams.get("companyId") || "";
-    if (!companyId) return json({ error: "companyId obrigatório" }, 400);
+    const userId = await requireUserId(req);
+    const url = query(req);
+    const companyId = url.get("companyId") || "";
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
     await assertCompanyAccess(userId, companyId);
 
-    if (request.method === "GET") {
-      const res = await db().query(
+    if (req.method === "GET") {
+      const q = await db().query(
         "SELECT * FROM fleet_vehicles WHERE company_id = $1 ORDER BY plate",
         [companyId]
       );
-      return json(res.rows);
+      return json(res, q.rows);
     }
 
-    const body = await readJson<VehiclePayload>(request);
+    const body = await readJson<VehiclePayload>(req);
 
-    if (request.method === "POST") {
-      if (!body.plate || !body.brand || !body.model) return json({ error: "Placa, marca e modelo são obrigatórios" }, 400);
-      const res = await db().query(
+    if (req.method === "POST") {
+      if (!body.plate || !body.brand || !body.model) return json(res, { error: "Placa, marca e modelo são obrigatórios" }, 400);
+      const q = await db().query(
         `INSERT INTO fleet_vehicles (company_id, plate, brand, model, year, color, fuel_type, current_mileage, renavam, chassis, status, ipva_due_date, licensing_due_date, insurance_due_date, insurance_company, acquisition_date, acquisition_cost, notes)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`,
         [companyId, body.plate.toUpperCase(), body.brand, body.model, body.year ?? null, body.color ?? null, body.fuel_type ?? null, body.current_mileage ?? 0, body.renavam ?? null, body.chassis ?? null, body.status ?? "ativo", body.ipva_due_date ?? null, body.licensing_due_date ?? null, body.insurance_due_date ?? null, body.insurance_company ?? null, body.acquisition_date ?? null, body.acquisition_cost ?? null, body.notes ?? null]
       );
-      return json(res.rows[0], 201);
+      return json(res, q.rows[0], 201);
     }
 
-    if (request.method === "PATCH") {
-      if (!body.id) return json({ error: "id obrigatório" }, 400);
+    if (req.method === "PATCH") {
+      if (!body.id) return json(res, { error: "id obrigatório" }, 400);
       const sets: string[] = [];
       const vals: unknown[] = [];
       let i = 1;
@@ -75,23 +76,23 @@ export default async function handler(request: Request) {
       }
       sets.push("updated_at = now()");
       vals.push(companyId, body.id);
-      const res = await db().query(
+      const q = await db().query(
         "UPDATE fleet_vehicles SET " + sets.join(", ") + " WHERE company_id = $" + i++ + " AND id = $" + i + " RETURNING *",
         vals
       );
-      if (res.rowCount === 0) return json({ error: "Veículo não encontrado" }, 404);
-      return json(res.rows[0]);
+      if (q.rowCount === 0) return json(res, { error: "Veículo não encontrado" }, 404);
+      return json(res, q.rows[0]);
     }
 
-    if (request.method === "DELETE") {
-      const id = url.searchParams.get("id");
-      if (!id) return json({ error: "id obrigatório" }, 400);
+    if (req.method === "DELETE") {
+      const id = url.get("id");
+      if (!id) return json(res, { error: "id obrigatório" }, 400);
       await db().query("DELETE FROM fleet_vehicles WHERE company_id = $1 AND id = $2", [companyId, id]);
-      return json({ ok: true });
+      return json(res, { ok: true });
     }
 
-    return json({ error: "Método não suportado" }, 405);
+    return json(res, { error: "Método não suportado" }, 405);
   } catch (e) {
-    return handleError(e);
+    return handleError(res, e);
   }
 }

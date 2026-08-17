@@ -1,6 +1,7 @@
 import { requireUserId } from "../_lib/auth";
 import { db } from "../_lib/db";
-import { handleError, json, readJson } from "../_lib/http";
+import { handleError, json, query, readJson } from "../_lib/http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../_lib/tenant";
 
 export const config = { runtime: "nodejs" };
@@ -18,16 +19,16 @@ interface CreatePayload {
   photos: string[]; // data URLs
 }
 
-export default async function handler(request: Request) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const userId = await requireUserId(request);
-    const url = new URL(request.url);
-    const companyId = url.searchParams.get("companyId") || "";
-    if (!companyId) return json({ error: "companyId obrigatório" }, 400);
+    const userId = await requireUserId(req);
+    const url = query(req);
+    const companyId = url.get("companyId") || "";
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
     await assertCompanyAccess(userId, companyId);
 
-    if (request.method === "GET") {
-      const res = await db().query(
+    if (req.method === "GET") {
+      const q = await db().query(
         `SELECT c.*, v.plate, v.brand, v.model
          FROM fleet_checklists c
          JOIN fleet_vehicles v ON v.id = c.vehicle_id
@@ -41,16 +42,16 @@ export default async function handler(request: Request) {
         [companyId]
       );
       const todayIds = todayRes.rows.map((r) => r.vehicle_id);
-      return json({ rows: res.rows, todayIds });
+      return json(res, { rows: q.rows, todayIds });
     }
 
-    if (request.method === "POST") {
-      const body = await readJson<CreatePayload>(request);
+    if (req.method === "POST") {
+      const body = await readJson<CreatePayload>(req);
       if (!body.vehicle_id || !body.template_id || !body.signature_data_url) {
-        return json({ error: "Veículo, modelo e assinatura são obrigatórios" }, 400);
+        return json(res, { error: "Veículo, modelo e assinatura são obrigatórios" }, 400);
       }
       if (!Array.isArray(body.answers) || body.answers.length === 0) {
-        return json({ error: "Responda todos os itens" }, 400);
+        return json(res, { error: "Responda todos os itens" }, 400);
       }
 
       const client = await db().connect();
@@ -75,7 +76,7 @@ export default async function handler(request: Request) {
           );
         }
         await client.query("COMMIT");
-        return json(chk.rows[0], 201);
+        return json(res, chk.rows[0], 201);
       } catch (e) {
         await client.query("ROLLBACK");
         throw e;
@@ -84,8 +85,8 @@ export default async function handler(request: Request) {
       }
     }
 
-    return json({ error: "Método não suportado" }, 405);
+    return json(res, { error: "Método não suportado" }, 405);
   } catch (e) {
-    return handleError(e);
+    return handleError(res, e);
   }
 }

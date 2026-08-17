@@ -1,6 +1,7 @@
 import { requireUserId } from "../_lib/auth";
 import { db } from "../_lib/db";
-import { handleError, json, readJson } from "../_lib/http";
+import { handleError, json, query, readJson } from "../_lib/http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../_lib/tenant";
 
 export const config = { runtime: "nodejs" };
@@ -22,15 +23,15 @@ interface TemplatePayload {
 
 const ITEM_FIELDS = ["id", "template_id", "description", "required", "sort_order"];
 
-export default async function handler(request: Request) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const userId = await requireUserId(request);
-    const url = new URL(request.url);
-    const companyId = url.searchParams.get("companyId") || "";
-    if (!companyId) return json({ error: "companyId obrigatório" }, 400);
+    const userId = await requireUserId(req);
+    const url = query(req);
+    const companyId = url.get("companyId") || "";
+    if (!companyId) return json(res, { error: "companyId obrigatório" }, 400);
     await assertCompanyAccess(userId, companyId);
 
-    if (request.method === "GET") {
+    if (req.method === "GET") {
       const tplRes = await db().query(
         "SELECT * FROM fleet_checklist_templates WHERE company_id = $1 ORDER BY created_at",
         [companyId]
@@ -43,15 +44,15 @@ export default async function handler(request: Request) {
       for (const it of itemsRes.rows) {
         (byTemplate[it.template_id] = byTemplate[it.template_id] || []).push(it);
       }
-      return json(tplRes.rows.map((t) => ({ ...t, items: byTemplate[t.id] || [] })));
+      return json(res, tplRes.rows.map((t) => ({ ...t, items: byTemplate[t.id] || [] })));
     }
 
-    const body = await readJson<TemplatePayload>(request);
+    const body = await readJson<TemplatePayload>(req);
 
-    if (request.method === "POST") {
-      if (!body.name || body.name.trim().length < 3) return json({ error: "Informe um nome com pelo menos 3 caracteres" }, 400);
+    if (req.method === "POST") {
+      if (!body.name || body.name.trim().length < 3) return json(res, { error: "Informe um nome com pelo menos 3 caracteres" }, 400);
       const items = body.items || [];
-      if (items.length === 0) return json({ error: "Adicione pelo menos um item" }, 400);
+      if (items.length === 0) return json(res, { error: "Adicione pelo menos um item" }, 400);
       const client = await db().connect();
       try {
         await client.query("BEGIN");
@@ -66,7 +67,7 @@ export default async function handler(request: Request) {
           );
         }
         await client.query("COMMIT");
-        return json(tpl.rows[0], 201);
+        return json(res, tpl.rows[0], 201);
       } catch (e) {
         await client.query("ROLLBACK");
         throw e;
@@ -75,8 +76,8 @@ export default async function handler(request: Request) {
       }
     }
 
-    if (request.method === "PATCH") {
-      if (!body.id) return json({ error: "id obrigatório" }, 400);
+    if (req.method === "PATCH") {
+      if (!body.id) return json(res, { error: "id obrigatório" }, 400);
       const client = await db().connect();
       try {
         await client.query("BEGIN");
@@ -121,7 +122,7 @@ export default async function handler(request: Request) {
           }
         }
         await client.query("COMMIT");
-        return json({ ok: true });
+        return json(res, { ok: true });
       } catch (e) {
         await client.query("ROLLBACK");
         throw e;
@@ -130,15 +131,15 @@ export default async function handler(request: Request) {
       }
     }
 
-    if (request.method === "DELETE") {
-      const id = url.searchParams.get("id");
-      if (!id) return json({ error: "id obrigatório" }, 400);
+    if (req.method === "DELETE") {
+      const id = url.get("id");
+      if (!id) return json(res, { error: "id obrigatório" }, 400);
       await db().query("DELETE FROM fleet_checklist_templates WHERE company_id = $1 AND id = $2", [companyId, id]);
-      return json({ ok: true });
+      return json(res, { ok: true });
     }
 
-    return json({ error: "Método não suportado" }, 405);
+    return json(res, { error: "Método não suportado" }, 405);
   } catch (e) {
-    return handleError(e);
+    return handleError(res, e);
   }
 }

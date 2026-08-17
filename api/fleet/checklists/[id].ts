@@ -1,17 +1,18 @@
 import { requireUserId } from "../../_lib/auth";
 import { db } from "../../_lib/db";
-import { handleError, json } from "../../_lib/http";
+import { handleError, json, query } from "../../_lib/http";
+import type { IncomingMessage, ServerResponse } from "http";
 import { assertCompanyAccess } from "../../_lib/tenant";
 
 export const config = { runtime: "nodejs" };
 
-export default async function handler(request: Request) {
+export default async function handler(req: IncomingMessage, res: ServerResponse) {
   try {
-    const userId = await requireUserId(request);
-    const url = new URL(request.url);
-    const id = url.pathname.split("/").pop() || "";
-    const companyId = url.searchParams.get("companyId") || "";
-    if (!id || !companyId) return json({ error: "Parâmetros obrigatórios ausentes" }, 400);
+    const userId = await requireUserId(req);
+    const url = query(req);
+    const id = new URL(req.url || "/", "http://localhost").pathname.split("/").pop() || "";
+    const companyId = url.get("companyId") || "";
+    if (!id || !companyId) return json(res, { error: "Parâmetros obrigatórios ausentes" }, 400);
     await assertCompanyAccess(userId, companyId);
 
     const chk = await db().query(
@@ -22,7 +23,7 @@ export default async function handler(request: Request) {
        WHERE c.id = $1 AND c.company_id = $2`,
       [id, companyId]
     );
-    if (chk.rowCount === 0) return json({ error: "Inspeção não encontrada" }, 404);
+    if (chk.rowCount === 0) return json(res, { error: "Inspeção não encontrada" }, 404);
 
     const [answers, photos] = await Promise.all([
       db().query(
@@ -35,8 +36,8 @@ export default async function handler(request: Request) {
       db().query("SELECT id, data_url, created_at FROM fleet_checklist_photos WHERE checklist_id = $1 ORDER BY created_at", [id]),
     ]);
 
-    return json({ checklist: chk.rows[0], answers: answers.rows, photos: photos.rows });
+    return json(res, { checklist: chk.rows[0], answers: answers.rows, photos: photos.rows });
   } catch (e) {
-    return handleError(e);
+    return handleError(res, e);
   }
 }
