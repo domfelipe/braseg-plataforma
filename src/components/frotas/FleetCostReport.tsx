@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,20 +60,12 @@ export default function FleetCostReport() {
     if (!selectedCompany) return;
     const fetch = async () => {
       setLoading(true);
-      const [mRes, vRes] = await Promise.all([
-        supabase
-          .from("fleet_maintenances")
-          .select("id, vehicle_id, type, description, date, cost")
-          .eq("company_id", selectedCompany.id)
-          .order("date", { ascending: true }),
-        supabase
-          .from("fleet_vehicles")
-          .select("id, plate, brand, model")
-          .eq("company_id", selectedCompany.id)
-          .order("plate"),
+      const [mList, vList] = await Promise.all([
+        api.get<Maintenance[]>("/fleet/maintenances", { companyId: selectedCompany.id }),
+        api.get<Vehicle[]>("/fleet/vehicles", { companyId: selectedCompany.id }),
       ]);
-      setMaintenances((mRes.data as Maintenance[]) || []);
-      setVehicles((vRes.data as Vehicle[]) || []);
+      setMaintenances(mList);
+      setVehicles(vList);
       setLoading(false);
     };
     fetch();

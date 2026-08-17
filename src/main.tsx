@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
 import { registerSW } from "virtual:pwa-register";
 import App from "./App.tsx";
 import "@fontsource/space-grotesk/500.css";
@@ -14,8 +15,6 @@ import {
 } from "./lib/appUpdate";
 
 // Auto-update PWA: quando uma nova versão é detectada, ela é ativada na hora.
-// Isso impede que bundles antigos em cache mantenham telas desatualizadas
-// (ex.: totais financeiros parciais) depois de um deploy.
 installControllerChangeReload();
 
 const updateServiceWorker = registerSW({
@@ -29,12 +28,35 @@ const updateServiceWorker = registerSW({
 });
 
 function boot() {
-  createRoot(document.getElementById("root")!).render(<App />);
+  createRoot(document.getElementById("root")!).render(
+    <ClerkProvider
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      afterSignOutUrl="/login"
+      signInFallbackRedirectUrl="/dashboard"
+      signUpFallbackRedirectUrl="/dashboard"
+      appearance={{
+        variables: {
+          colorPrimary: "#E3A12E",
+          colorBackground: "#FFFFFF",
+          colorText: "#1F1F1F",
+          colorDanger: "#C0392B",
+          borderRadius: "10px",
+          fontFamily: "'Inter', system-ui, sans-serif",
+        },
+        elements: {
+          card: { boxShadow: "none", border: "none" },
+          formButtonPrimary: { backgroundColor: "#1F3057", "&:hover": { backgroundColor: "#17233F" } },
+          footerActionLink: { color: "#B97E1F" },
+        },
+      }}
+    >
+      <App />
+    </ClerkProvider>
+  );
 }
 
 // Recuperação one-shot por build: limpa caches obsoletos do app/Workbox e
-// recarrega UMA única vez. Nunca toca em dados de autenticação (sb-*) nem em
-// caches de terceiros. Em caso de falha, o app sempre inicia.
+// recarrega UMA única vez. Em caso de falha, o app sempre inicia.
 runBuildRecovery(__APP_BUILD_ID__)
   .then((reloading) => {
     if (!reloading) boot();

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -64,17 +64,14 @@ export default function FleetVehicles() {
   const fetchVehicles = async () => {
     if (!companyId) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("fleet_vehicles")
-      .select("*")
-      .eq("company_id", companyId)
-      .order("plate");
-    if (error) {
-      toast({ title: "Erro ao carregar veículos", description: error.message, variant: "destructive" });
-    } else {
-      setVehicles((data as Vehicle[]) || []);
+    try {
+      const vehicles = await api.get<Vehicle[]>("/fleet/vehicles", { companyId });
+      setVehicles(vehicles);
+    } catch (err) {
+      toast({ title: "Erro ao carregar veículos", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => { fetchVehicles(); }, [companyId]);
@@ -82,22 +79,13 @@ export default function FleetVehicles() {
   // Veículos inspecionados hoje (selo "sem inspeção hoje")
   useEffect(() => {
     if (!companyId) return;
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, "0");
-    const d = String(today.getDate()).padStart(2, "0");
-    const todayStr = y + "-" + m + "-" + d;
-    supabase
-      .from("fleet_checklists")
-      .select("vehicle_id")
-      .eq("company_id", companyId)
-      .gte("created_at", todayStr + "T00:00:00")
-      .lte("created_at", todayStr + "T23:59:59")
-      .then(({ data }) => {
-        setInspectedToday(new Set(((data || []) as { vehicle_id: string }[]).map((r) => r.vehicle_id)));
+    api
+      .get<{ rows: unknown[]; todayIds: string[] }>("/fleet/checklists", { companyId })
+      .then((data) => {
+        setInspectedToday(new Set(data.todayIds));
       })
       .catch(() => {
-        setInspectedToday(new Set()); // tabela ainda não existe no ambiente
+        setInspectedToday(new Set());
       });
   }, [companyId]);
 
@@ -149,29 +137,30 @@ export default function FleetVehicles() {
       notes: form.notes || null,
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from("fleet_vehicles").update(payload).eq("id", editingId));
-    } else {
-      ({ error } = await supabase.from("fleet_vehicles").insert(payload));
-    }
-
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      if (editingId) {
+        await api.patch("/fleet/vehicles", { companyId, id: editingId, ...payload });
+      } else {
+        await api.post("/fleet/vehicles", { companyId, ...payload });
+      }
       toast({ title: editingId ? "Veículo atualizado" : "Veículo cadastrado" });
       setDialogOpen(false);
       fetchVehicles();
+    } catch (err) {
+      toast({ title: "Erro ao salvar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from("fleet_vehicles").delete().eq("id", deleteId);
-    if (error) {
-      toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      await api.del("/fleet/vehicles", { companyId, id: deleteId });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    }
+    {
       toast({ title: "Veículo excluído" });
       fetchVehicles();
     }

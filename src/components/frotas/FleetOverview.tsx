@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ interface FleetVehicleRow {
 
 interface FleetReminderRow {
   id: string;
+  vehicle_id: string;
   title: string;
   due_date: string;
   status: string;
@@ -41,32 +42,33 @@ export default function FleetOverview() {
   const [recentMaintenances, setRecentMaintenances] = useState<FleetMaintenanceRow[]>([]);
   const [vehicleMap, setVehicleMap] = useState<Record<string, FleetVehicleRow>>({});
   const [loading, setLoading] = useState(true);
+
+  const companyId = selectedCompany?.id;
+
   useEffect(() => {
     if (!companyId) return;
     const fetch = async () => {
       setLoading(true);
-      const [{ data: vehicles }, { data: maintenances }, { data: reminders }] = await Promise.all([
-        supabase.from("fleet_vehicles").select("*").eq("company_id", companyId),
-        supabase.from("fleet_maintenances").select("*").eq("company_id", companyId).order("date", { ascending: false }).limit(5),
-        supabase.from("fleet_reminders").select("*").eq("company_id", companyId).in("status", ["pendente", "vencido"]).order("due_date").limit(10),
+      const [vList, maintList, remindersList] = await Promise.all([
+        api.get<FleetVehicleRow[]>("/fleet/vehicles", { companyId }),
+        api.get<FleetMaintenanceRow[]>("/fleet/maintenances", { companyId }),
+        api.get<FleetReminderRow[]>("/fleet/reminders", { companyId }),
       ]);
 
-      const vList = (vehicles as FleetVehicleRow[]) || [];
-      const mList = (maintenances as FleetMaintenanceRow[]) || [];
-      const rList = (reminders as FleetReminderRow[]) || [];
+      const mList = [...maintList].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 5);
+      const rList = remindersList.filter((r) => r.status === "pendente" || r.status === "vencido").slice(0, 10);
 
       const vMap = Object.fromEntries(vList.map(v => [v.id, v]));
       setVehicleMap(vMap);
 
-      // Get total maintenance cost
-      const { data: allMaint } = await supabase.from("fleet_maintenances").select("cost").eq("company_id", companyId);
-      const totalCost = ((allMaint as FleetMaintenanceRow[]) || []).reduce((s, m) => s + Number(m.cost || 0), 0);
+      // Custo total de manutenções
+      const totalCost = maintList.reduce((s, m) => s + Number(m.cost || 0), 0);
 
       setStats({
         vehicles: vList.length,
         activeVehicles: vList.filter(v => v.status === "ativo").length,
         totalMaintCost: totalCost,
-        maintenances: ((allMaint as FleetMaintenanceRow[]) || []).length,
+        maintenances: maintList.length,
       });
 
       // Mark overdue

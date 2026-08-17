@@ -1,63 +1,84 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Check, X, Camera, PenLine, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, X, Camera, PenLine } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
+import { useCompany } from "@/hooks/useCompany";
 import { formatLocalDateTime } from "@/lib/utils";
-import { ChecklistAnswerRow, ChecklistPhotoRow, ChecklistRow } from "@/lib/checklist";
 import { cn } from "@/lib/utils";
 
-interface DetailRow extends ChecklistRow {
-  vehicle: { plate: string; brand: string; model: string } | null;
-  template: { name: string } | null;
+interface DetailRow {
+  id: string;
+  vehicle_id: string;
+  template_id: string;
+  driver_name: string | null;
+  odometer: number | null;
+  status: "conforme" | "nao_conforme";
+  notes: string | null;
+  signature_data_url: string;
+  created_at: string;
+  plate: string;
+  brand: string;
+  model: string;
+  template_name: string;
 }
 
-interface AnswerWithItem extends ChecklistAnswerRow {
-  item: { description: string; required: boolean } | null;
+interface AnswerRow {
+  id: string;
+  item_id: string;
+  ok: boolean;
+  observation: string | null;
+  description: string;
+  required: boolean;
+}
+
+interface PhotoRow {
+  id: string;
+  data_url: string;
 }
 
 export function ChecklistDetail() {
   const { id } = useParams<{ id: string }>();
+  const { selectedCompany } = useCompany();
   const navigate = useNavigate();
   const [row, setRow] = useState<DetailRow | null>(null);
-  const [answers, setAnswers] = useState<AnswerWithItem[]>([]);
-  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<AnswerRow[]>([]);
+  const [photos, setPhotos] = useState<PhotoRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !selectedCompany?.id) return;
     let cancelled = false;
-    const load = async () => {
-      const [cRes, aRes, pRes] = await Promise.all([
-        supabase.from("fleet_checklists").select("*, vehicle:fleet_vehicles(plate, brand, model), template:fleet_checklist_templates(name)").eq("id", id).single(),
-        supabase.from("fleet_checklist_answers").select("*, item:fleet_checklist_items(description, required)").eq("checklist_id", id).order("created_at"),
-        supabase.from("fleet_checklist_photos").select("*").eq("checklist_id", id).order("created_at"),
-      ]);
-      if (cancelled) return;
-      setRow((cRes.data || null) as DetailRow | null);
-      setAnswers((aRes.data || []) as AnswerWithItem[]);
-
-      const photos = (pRes.data || []) as ChecklistPhotoRow[];
-      const urls: string[] = [];
-      for (const p of photos) {
-        const { data } = await supabase.storage.from("fleet-checklists").createSignedUrl(p.storage_path, 3600);
-        if (data?.signedUrl) urls.push(data.signedUrl);
-      }
-      if (cancelled) return;
-      setPhotoUrls(urls);
-      setLoading(false);
+    api
+      .get<{ checklist: DetailRow; answers: AnswerRow[]; photos: PhotoRow[] }>("/fleet/checklists/" + id, {
+        companyId: selectedCompany.id,
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setRow(data.checklist);
+        setAnswers(data.answers);
+        setPhotos(data.photos);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) {
+          setNotFound(true);
+          setLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
     };
-    load();
-    return () => { cancelled = true; };
-  }, [id]);
+  }, [id, selectedCompany?.id]);
 
   if (loading) {
     return <div className="space-y-4">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-[10px] bg-muted" />)}</div>;
   }
 
-  if (!row) {
+  if (notFound || !row) {
     return (
       <Card className="rounded-[10px]">
         <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -76,9 +97,9 @@ export function ChecklistDetail() {
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight">{row.vehicle?.plate || "Inspeção"}</h1>
+          <h1 className="font-display text-2xl font-bold tracking-tight">{row.plate}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {row.vehicle?.brand} {row.vehicle?.model} · {row.template?.name} · {formatLocalDateTime(row.created_at)}
+            {row.brand} {row.model} · {row.template_name} · {formatLocalDateTime(row.created_at)}
           </p>
         </div>
         <Badge className={cn("h-6 shrink-0 border-0 px-2.5 text-xs font-semibold", row.status === "conforme" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>
@@ -112,7 +133,7 @@ export function ChecklistDetail() {
                 {a.ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium">{i + 1}. {a.item?.description || "Item"}</p>
+                <p className="text-sm font-medium">{i + 1}. {a.description}</p>
                 {!a.ok && a.observation && <p className="mt-1 text-xs text-destructive">{a.observation}</p>}
               </div>
             </div>
@@ -120,15 +141,15 @@ export function ChecklistDetail() {
         </CardContent>
       </Card>
 
-      {photoUrls.length > 0 && (
+      {photos.length > 0 && (
         <Card className="rounded-[10px]">
           <CardContent className="space-y-3 pt-6">
             <h2 className="font-display flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              <Camera className="h-4 w-4" /> Fotos ({photoUrls.length})
+              <Camera className="h-4 w-4" /> Fotos ({photos.length})
             </h2>
             <div className="flex flex-wrap gap-3">
-              {photoUrls.map((u, i) => (
-                <img key={i} src={u} alt={"Foto " + (i + 1) + " da inspeção"} className="h-28 w-28 rounded-[10px] border border-border object-cover" />
+              {photos.map((p) => (
+                <img key={p.id} src={p.data_url} alt="Foto da inspeção" className="h-28 w-28 rounded-[10px] border border-border object-cover" />
               ))}
             </div>
           </CardContent>

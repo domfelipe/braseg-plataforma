@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { motion, useSpring, useTransform } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { useMotionValueEvent, useSpring } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -15,8 +15,12 @@ interface KpiCardProps {
 
 export function KpiCard({ label, value, prefix = "", icon: Icon, tone = "default", loading }: KpiCardProps) {
   const spring = useSpring(0, { stiffness: 90, damping: 20 });
-  const display = useTransform(spring, (v) => Math.round(v).toLocaleString("pt-BR"));
+  const [display, setDisplay] = useState("0");
   const prevValue = useRef(0);
+
+  useMotionValueEvent(spring, "change", (v) => {
+    setDisplay(Math.round(v).toLocaleString("pt-BR"));
+  });
 
   useEffect(() => {
     prevValue.current = value;
@@ -39,10 +43,10 @@ export function KpiCard({ label, value, prefix = "", icon: Icon, tone = "default
           {loading ? (
             <div className="mt-2 h-8 w-20 animate-pulse rounded-md bg-muted" />
           ) : (
-            <motion.p className="font-display mt-2 text-3xl font-bold tracking-tight tabular-nums">
+            <p className="font-display mt-2 text-3xl font-bold tracking-tight tabular-nums">
               {prefix}
               {display}
-            </motion.p>
+            </p>
           )}
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/[0.07]">

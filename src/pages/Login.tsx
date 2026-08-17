@@ -1,69 +1,7 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff, ArrowLeft, ShieldCheck, Truck, MessageSquare } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { SignIn } from "@clerk/clerk-react";
+import { ShieldCheck, Truck, MessageSquare } from "lucide-react";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<"login" | "recovery">("login");
-  const { signIn } = useAuth();
-  const navigate = useNavigate();
-  const { toast } = useToast();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    const { error } = await signIn(email, password);
-
-    if (error) {
-      toast({
-        title: "Erro ao entrar",
-        description: "E-mail ou senha incorretos.",
-        variant: "destructive",
-      });
-      setLoading(false);
-      return;
-    }
-
-    navigate("/dashboard");
-  };
-
-  const handleRecovery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/redefinir-senha",
-    });
-
-    setLoading(false);
-
-    if (error) {
-      toast({
-        title: "Erro",
-        description: "Não foi possível enviar o e-mail de recuperação.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "E-mail enviado",
-      description: "Verifique sua caixa de entrada para redefinir sua senha.",
-    });
-    setMode("login");
-  };
-
   return (
     <div className="flex min-h-screen bg-background">
       {/* Painel navy */}
@@ -117,9 +55,9 @@ export default function Login() {
         <p className="relative z-10 text-xs text-white/30">© {new Date().getFullYear()} Braseg · powered by DOMCO</p>
       </div>
 
-      {/* Formulário */}
+      {/* Formulário Clerk */}
       <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
-        <div className="w-full max-w-sm animate-fade-in-up">
+        <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent">
               <ShieldCheck className="h-5 w-5 text-[#17233F]" strokeWidth={1.75} />
@@ -129,103 +67,7 @@ export default function Login() {
               <p className="text-xs text-muted-foreground">Portal Unificado</p>
             </div>
           </div>
-
-          {mode === "recovery" ? (
-            <button
-              type="button"
-              onClick={() => setMode("login")}
-              className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" /> Voltar para o login
-            </button>
-          ) : null}
-
-          <h2 className="font-display text-2xl font-bold tracking-tight">
-            {mode === "login" ? "Bem-vindo de volta" : "Recuperar senha"}
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {mode === "login"
-              ? "Acesse o portal da Braseg com suas credenciais."
-              : "Enviaremos um link para redefinir sua senha."}
-          </p>
-
-          {mode === "login" ? (
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-medium">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="h-11"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-medium">Senha</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    autoComplete="current-password"
-                    className="h-11 pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
-                    tabIndex={-1}
-                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setMode("recovery")}
-                    className="text-xs font-medium text-accent hover:text-accent/80 hover:underline"
-                  >
-                    Esqueci minha senha
-                  </button>
-                </div>
-              </div>
-
-              <Button type="submit" variant="accent" className="h-11 w-full font-semibold" disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Entrar
-              </Button>
-            </form>
-          ) : (
-            <form onSubmit={handleRecovery} className="mt-8 space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="recovery-email" className="text-xs font-medium">E-mail</Label>
-                <Input
-                  id="recovery-email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                  className="h-11"
-                />
-              </div>
-
-              <Button type="submit" variant="accent" className="h-11 w-full font-semibold" disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Enviar link de recuperação
-              </Button>
-            </form>
-          )}
+          <SignIn routing="path" path="/login" />
         </div>
       </div>
     </div>

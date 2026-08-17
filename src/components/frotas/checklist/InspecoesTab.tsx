@@ -11,14 +11,18 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Switch } from "@/components/ui/switch";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { formatLocalDate, formatLocalDateTime } from "@/lib/utils";
+import { api } from "@/integrations/api/client";
+import { formatLocalDateTime } from "@/lib/utils";
 import { ChecklistItem, ChecklistTemplate, ChecklistRow } from "@/lib/checklist";
 import { cn } from "@/lib/utils";
 
 interface HistoryRow extends ChecklistRow {
-  vehicle: { plate: string; brand: string; model: string } | null;
+  plate: string;
+  brand: string;
+  model: string;
 }
+
+type TemplateWithItems = ChecklistTemplate & { items: ChecklistItem[] };
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   conforme: { label: "Conforme", className: "bg-success/10 text-success" },
@@ -31,7 +35,7 @@ export function InspecoesTab() {
   const navigate = useNavigate();
 
   const [rows, setRows] = useState<HistoryRow[]>([]);
-  const [templates, setTemplates] = useState<ChecklistTemplate[]>([]);
+  const [templates, setTemplates] = useState<TemplateWithItems[]>([]);
   const [todayIds, setTodayIds] = useState<Set<string>>(new Set());
   const [activeVehicles, setActiveVehicles] = useState<{ id: string; plate: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,30 +57,17 @@ export function InspecoesTab() {
   const load = useCallback(async () => {
     if (!companyId) return;
     setLoading(true);
-    const today = formatLocalDate(new Date());
-    const [cRes, tRes, vRes, todayRes] = await Promise.all([
-      supabase
-        .from("fleet_checklists")
-        .select("*, vehicle:fleet_vehicles(plate, brand, model)")
-        .eq("company_id", companyId)
-        .order("created_at", { ascending: false })
-        .limit(100),
-      supabase.from("fleet_checklist_templates").select("*").eq("company_id", companyId).order("created_at"),
-      supabase.from("fleet_vehicles").select("id, plate").eq("company_id", companyId).eq("status", "ativo").order("plate"),
-      supabase
-        .from("fleet_checklists")
-        .select("vehicle_id, created_at")
-        .eq("company_id", companyId)
-        .gte("created_at", today + "T00:00:00")
-        .lte("created_at", today + "T23:59:59"),
+    const [ckRes, tplRes, vehRes] = await Promise.all([
+      api.get<{ rows: HistoryRow[]; todayIds: string[] }>("/fleet/checklists", { companyId }),
+      api.get<TemplateWithItems[]>("/fleet/templates", { companyId }),
+      api.get<{ id: string; plate: string; status: string }[]>("/fleet/vehicles", { companyId }),
     ]);
 
-    setRows((cRes.data || []) as HistoryRow[]);
-    setTemplates((tRes.data || []) as ChecklistTemplate[]);
-    const actives = (vRes.data || []) as { id: string; plate: string }[];
+    setRows(ckRes.rows);
+    setTemplates(tplRes);
+    const actives = vehRes.filter((v) => v.status === "ativo");
     setActiveVehicles(actives);
-    const done = new Set(((todayRes.data || []) as { vehicle_id: string }[]).map((r) => r.vehicle_id));
-    setTodayIds(done);
+    setTodayIds(new Set(ckRes.todayIds));
     setLoading(false);
   }, [companyId]);
 
@@ -92,7 +83,7 @@ export function InspecoesTab() {
       if (filterStatus !== "all" && r.status !== filterStatus) return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
-        const plate = (r.vehicle?.plate || "").toLowerCase();
+        const plate = (r.plate || "").toLowerCase();
         const driver = (r.driver_name || "").toLowerCase();
         if (!plate.includes(q) && !driver.includes(q)) return false;
       }
@@ -104,8 +95,7 @@ export function InspecoesTab() {
     setEditingTemplate(tpl);
     setTplName(tpl.name);
     setTplCategory(tpl.category);
-    const { data } = await supabase.from("fleet_checklist_items").select("*").eq("template_id", tpl.id).order("sort_order");
-    setItems((data || []) as ChecklistItem[]);
+    setItems((tpl as unknown as { items?: ChecklistItem[] }).items || []);
     setNewItem("");
   };
 
@@ -129,53 +119,45 @@ export function InspecoesTab() {
     }
     setSavingTpl(true);
 
-    if (editingTemplate) {
-      await supabase.from("fleet_checklist_templates").update({ name: tplName.trim(), category: tplCategory }).eq("id", editingTemplate.id);
-      // Itens: deletar os removidos e atualizar/inserir por descrição simples (MVP)
-      const { data: existing } = await supabase.from("fleet_checklist_items").select("id").eq("template_id", editingTemplate.id);
-      const existingIds = new Set((existing || []).map((i) => i.id));
-      const keepIds = new Set(items.filter((i) => i.id).map((i) => i.id));
-      for (const oldId of existingIds) {
-        if (!keepIds.has(oldId)) await supabase.from("fleet_checklist_items").delete().eq("id", oldId);
+    try {
+      if (editingTemplate) {
+        await api.patch("/fleet/templates", {
+          companyId,
+          id: editingTemplate.id,
+          name: tplName.trim(),
+          category: tplCategory,
+          items: items.map((it, i) => ({ id: it.id || undefined, description: it.description, required: true, sort_order: i + 1 })),
+        });
+      } else {
+        await api.post("/fleet/templates", {
+          companyId,
+          name: tplName.trim(),
+          category: tplCategory,
+          active: true,
+          items: items.map((it, i) => ({ description: it.description, required: true, sort_order: i + 1 })),
+        });
       }
-      for (const it of items) {
-        if (it.id) {
-          await supabase.from("fleet_checklist_items").update({ description: it.description, sort_order: it.sort_order }).eq("id", it.id);
-        } else {
-          await supabase.from("fleet_checklist_items").insert({ template_id: editingTemplate.id, description: it.description, required: true, sort_order: it.sort_order });
-        }
-      }
-    } else {
-      const { data: created } = await supabase
-        .from("fleet_checklist_templates")
-        .insert({ company_id: companyId, name: tplName.trim(), category: tplCategory, active: true })
-        .select()
-        .single();
-      if (created) {
-        await supabase.from("fleet_checklist_items").insert(
-          items.map((it, i) => ({ template_id: created.id, description: it.description, required: true, sort_order: i + 1 }))
-        );
-      }
+      toast({ title: "Modelo salvo!" });
+      setEditingTemplate(null);
+    } catch (err) {
+      toast({ title: "Erro ao salvar modelo", description: err instanceof Error ? err.message : "Tente novamente.", variant: "destructive" });
+    } finally {
+      setSavingTpl(false);
+      load();
     }
-
-    setSavingTpl(false);
-    setEditingTemplate(null);
-    toast({ title: "Modelo salvo!" });
-    load();
   };
 
   const toggleTemplateActive = async (tpl: ChecklistTemplate) => {
-    await supabase.from("fleet_checklist_templates").update({ active: !tpl.active }).eq("id", tpl.id);
+    await api.patch("/fleet/templates", { companyId, id: tpl.id, active: !tpl.active });
     load();
   };
 
   const deleteTemplate = async (tpl: ChecklistTemplate) => {
-    const { count } = await supabase.from("fleet_checklists").select("id", { count: "exact", head: true }).eq("template_id", tpl.id);
-    if (count && count > 0) {
+    if (rows.some((r) => r.template_id === tpl.id)) {
       toast({ title: "Modelo em uso", description: "Há inspeções registradas com este modelo; desative-o em vez de excluir.", variant: "destructive" });
       return;
     }
-    await supabase.from("fleet_checklist_templates").delete().eq("id", tpl.id);
+    await api.del("/fleet/templates", { companyId, id: tpl.id });
     toast({ title: "Modelo excluído" });
     load();
   };
@@ -275,7 +257,7 @@ export function InspecoesTab() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">
-                    {r.vehicle?.plate || "Veículo"} <span className="font-normal text-muted-foreground">· {r.vehicle?.brand} {r.vehicle?.model}</span>
+                    {r.plate || "Veículo"} <span className="font-normal text-muted-foreground">· {r.brand} {r.model}</span>
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
                     {r.driver_name || "Condutor não informado"} · {formatLocalDateTime(r.created_at)}

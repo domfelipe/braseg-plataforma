@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,13 +65,18 @@ export default function FleetMaintenances() {
   const fetchData = async () => {
     if (!companyId) return;
     setLoading(true);
-    const [{ data: mData }, { data: vData }] = await Promise.all([
-      supabase.from("fleet_maintenances").select("*").eq("company_id", companyId).order("date", { ascending: false }),
-      supabase.from("fleet_vehicles").select("id, plate, brand, model").eq("company_id", companyId).order("plate"),
-    ]);
-    setMaintenances((mData as Maintenance[]) || []);
-    setVehicles((vData as Vehicle[]) || []);
-    setLoading(false);
+    try {
+      const [mList, vList] = await Promise.all([
+        api.get<Maintenance[]>("/fleet/maintenances", { companyId }),
+        api.get<Vehicle[]>("/fleet/vehicles", { companyId }),
+      ]);
+      setMaintenances(mList);
+      setVehicles(vList);
+    } catch (err) {
+      toast({ title: "Erro ao carregar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, [companyId]);
@@ -103,15 +108,8 @@ export default function FleetMaintenances() {
     }
     setSaving(true);
 
-    let attachment_url: string | null = form.existingAttachment || null;
-    if (file) {
-      const ext = file.name.split(".").pop();
-      const path = `${companyId}/frotas/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("invoices").upload(path, file);
-      if (upErr) { toast({ title: "Erro no upload", description: upErr.message, variant: "destructive" }); setSaving(false); return; }
-      const { data: urlData } = supabase.storage.from("invoices").getPublicUrl(path);
-      attachment_url = urlData.publicUrl;
-    }
+    // Anexos ficam para a v2 (Vercel Blob); campo mantido por compatibilidade
+    const attachment_url: string | null = form.existingAttachment || null;
 
     const items = form.items_replaced.split(",").map(s => s.trim()).filter(Boolean);
     const payload = {
@@ -122,29 +120,33 @@ export default function FleetMaintenances() {
       items_replaced: items, attachment_url, notes: form.notes || null,
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from("fleet_maintenances").update(payload).eq("id", editingId));
-    } else {
-      ({ error } = await supabase.from("fleet_maintenances").insert(payload));
-    }
-
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      if (editingId) {
+        await api.patch("/fleet/maintenances", { companyId, id: editingId, ...payload });
+      } else {
+        await api.post("/fleet/maintenances", { companyId, ...payload });
+      }
       toast({ title: editingId ? "Manutenção atualizada" : "Manutenção registrada" });
       setDialogOpen(false);
       fetchData();
+    } catch (err) {
+      toast({ title: "Erro ao salvar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from("fleet_maintenances").delete().eq("id", deleteId);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Manutenção excluída" }); fetchData(); }
-    setDeleteId(null);
+    try {
+      await api.del("/fleet/maintenances", { companyId, id: deleteId });
+      toast({ title: "Manutenção excluída" });
+      fetchData();
+    } catch (err) {
+      toast({ title: "Erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const vehicleMap = Object.fromEntries(vehicles.map(v => [v.id, v]));

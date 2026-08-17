@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import {
@@ -17,13 +17,21 @@ import {
   ChecklistTemplate,
   DEFAULT_TEMPLATE_ITEMS,
   DEFAULT_TEMPLATE_NAME,
-  checklistPhotoPath,
   computeChecklistStatus,
   itemAnswerIsValid,
 } from "@/lib/checklist";
 import { ChecklistItemRow } from "./ChecklistItemRow";
 import { PhotoCapture } from "./PhotoCapture";
 import { SignatureCanvas } from "./SignatureCanvas";
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error("Falha ao ler o arquivo"));
+    reader.readAsDataURL(file);
+  });
+}
 
 const STEPS = [
   { label: "Veículo", icon: Car },
@@ -38,6 +46,7 @@ interface VehicleOption {
   plate: string;
   brand: string;
   model: string;
+  status: string;
 }
 
 type Answer = { ok: boolean; observation: string };
@@ -72,35 +81,28 @@ export function ChecklistWizard() {
     let cancelled = false;
     const load = async () => {
       setLoading(true);
-      const [vRes, tRes] = await Promise.all([
-        supabase.from("fleet_vehicles").select("id, plate, brand, model").eq("company_id", companyId).eq("status", "ativo").order("plate"),
-        supabase.from("fleet_checklist_templates").select("*").eq("company_id", companyId).eq("active", true).order("created_at"),
+      const [vehiclesData, templatesData] = await Promise.all([
+        api.get<VehicleOption[]>("/fleet/vehicles", { companyId }),
+        api.get<(ChecklistTemplate & { items: ChecklistItem[] })[]>("/fleet/templates", { companyId }),
       ]);
       if (cancelled) return;
 
-      let tpl: ChecklistTemplate | null = (tRes.data && tRes.data[0]) || null;
-      if (!tpl && !tRes.error) {
-        const { data: created, error: cErr } = await supabase
-          .from("fleet_checklist_templates")
-          .insert({ company_id: companyId, name: DEFAULT_TEMPLATE_NAME, category: "pre_uso", active: true })
-          .select()
-          .single();
-        if (!cErr && created) {
-          tpl = created as ChecklistTemplate;
-          await supabase.from("fleet_checklist_items").insert(
-            DEFAULT_TEMPLATE_ITEMS.map((d, i) => ({ template_id: tpl!.id, description: d, required: true, sort_order: i + 1 }))
-          );
-        }
+      const active = templatesData.filter((x) => x.active);
+      let tpl: ChecklistTemplate | null = active[0] || null;
+      if (!tpl) {
+        tpl = await api.post<ChecklistTemplate>("/fleet/templates", {
+          companyId,
+          name: DEFAULT_TEMPLATE_NAME,
+          category: "pre_uso",
+          active: true,
+          items: DEFAULT_TEMPLATE_ITEMS.map((d, i) => ({ description: d, required: true, sort_order: i + 1 })),
+        });
       }
 
-      let itm: ChecklistItem[] = [];
-      if (tpl) {
-        const { data: iData } = await supabase.from("fleet_checklist_items").select("*").eq("template_id", tpl.id).order("sort_order");
-        itm = (iData || []) as ChecklistItem[];
-      }
+      const itm: ChecklistItem[] = (active[0] || (tpl ? (await api.get<(ChecklistTemplate & { items: ChecklistItem[] })[]>("/fleet/templates", { companyId })).find((x) => x.id === tpl!.id) : null))?.items || [];
 
       if (cancelled) return;
-      setVehicles((vRes.data || []) as VehicleOption[]);
+      setVehicles(vehiclesData.filter((v) => v.status === "ativo"));
       setTemplate(tpl);
       setItems(itm);
       setLoading(false);
@@ -141,50 +143,39 @@ export function ChecklistWizard() {
     if (!companyId || !template || !user) return;
     setSaving(true);
 
-    const payload = {
-      company_id: companyId,
-      vehicle_id: vehicleId,
-      template_id: template.id,
-      driver_name: driverName.trim(),
-      odometer: odometer === "" ? null : Number(odometer),
-      status: computeChecklistStatus(items.map((it) => ({ ok: answers[it.id]?.ok ?? true }))),
-      notes: notes.trim() || null,
-      signature_data_url: signature,
-      created_by: user.id,
-    };
+    const photosBase64: string[] = [];
+    for (const photo of photos) {
+      photosBase64.push(await fileToDataUrl(photo));
+    }
 
-    const { data: checklist, error: cErr } = await supabase.from("fleet_checklists").insert(payload).select().single();
-    if (cErr || !checklist) {
-      toast({ title: "Erro ao salvar inspeção", description: cErr?.message || "Tente novamente.", variant: "destructive" });
+    let checklist: { id: string; status: string };
+    try {
+      checklist = await api.post("/fleet/checklists", {
+        companyId,
+        vehicle_id: vehicleId,
+        template_id: template.id,
+        driver_name: driverName.trim(),
+        odometer: odometer === "" ? null : Number(odometer),
+        status: computeChecklistStatus(items.map((it) => ({ ok: answers[it.id]?.ok ?? true }))),
+        notes: notes.trim() || null,
+        signature_data_url: signature,
+        answers: items.map((it) => ({
+          item_id: it.id,
+          ok: answers[it.id]?.ok ?? true,
+          observation: answers[it.id]?.ok === false ? answers[it.id].observation.trim() : null,
+        })),
+        photos: photosBase64,
+      });
+    } catch (err) {
+      toast({ title: "Erro ao salvar inspeção", description: err instanceof Error ? err.message : "Tente novamente.", variant: "destructive" });
       setSaving(false);
       return;
-    }
-
-    const answersPayload = items.map((it) => ({
-      checklist_id: checklist.id,
-      item_id: it.id,
-      ok: answers[it.id]?.ok ?? true,
-      observation: answers[it.id]?.ok === false ? answers[it.id].observation.trim() : null,
-    }));
-    const { error: aErr } = await supabase.from("fleet_checklist_answers").insert(answersPayload);
-    if (aErr) {
-      toast({ title: "Atenção", description: "Inspeção salva, mas as respostas falharam: " + aErr.message, variant: "destructive" });
-    }
-
-    let photoWarnings = 0;
-    for (let i = 0; i < photos.length; i++) {
-      const path = checklistPhotoPath(companyId, checklist.id, i);
-      const { error: upErr } = await supabase.storage.from("fleet-checklists").upload(path, photos[i], { contentType: "image/jpeg" });
-      if (upErr) { photoWarnings++; continue; }
-      await supabase.from("fleet_checklist_photos").insert({ checklist_id: checklist.id, storage_path: path });
     }
 
     setSaving(false);
     toast({
       title: "Inspeção registrada!",
-      description:
-        (checklist.status === "conforme" ? "Veículo conforme. " : "Não conformidades registradas. ") +
-        (photoWarnings > 0 ? photoWarnings + " foto(s) não enviada(s)." : "Fotos enviadas."),
+      description: checklist.status === "conforme" ? "Veículo conforme. Fotos e assinatura gravadas." : "Não conformidades registradas. Fotos e assinatura gravadas.",
     });
     navigate("/frotas/inspecoes/" + checklist.id, { replace: true });
   };

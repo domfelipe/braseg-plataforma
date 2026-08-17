@@ -29,8 +29,8 @@ import { cn } from "@/lib/utils";
 export function AppSidebar() {
   const { state, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
-  const { companies, selectedCompany, setSelectedCompanyId, userModules } = useCompany();
-  const { profile, isMaster, signOut } = useAuth();
+  const { companies, selectedCompany, setSelectedCompanyId, userModules, isMaster } = useCompany();
+  const { profile, signOut } = useAuth();
   const navigate = useNavigate();
 
   const visible = MODULES.filter((m) => isMaster || userModules.includes(m.key));

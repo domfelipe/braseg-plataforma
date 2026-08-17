@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { api } from "@/integrations/api/client";
 import { useCompany } from "@/hooks/useCompany";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -70,19 +70,24 @@ export default function FleetReminders() {
   const fetchData = async () => {
     if (!companyId) return;
     setLoading(true);
-    const [{ data: rData }, { data: vData }] = await Promise.all([
-      supabase.from("fleet_reminders").select("*").eq("company_id", companyId).order("due_date"),
-      supabase.from("fleet_vehicles").select("id, plate, brand, model").eq("company_id", companyId).order("plate"),
-    ]);
-    // Auto-mark overdue
-    const now = new Date();
-    const processed = ((rData as Reminder[]) || []).map(r => {
-      if (r.status === "pendente" && new Date(r.due_date) < now) return { ...r, status: "vencido" as Reminder["status"] };
-      return r;
-    });
-    setReminders(processed);
-    setVehicles((vData as Vehicle[]) || []);
-    setLoading(false);
+    try {
+      const [rList, vList] = await Promise.all([
+        api.get<Reminder[]>("/fleet/reminders", { companyId }),
+        api.get<Vehicle[]>("/fleet/vehicles", { companyId }),
+      ]);
+      // Auto-mark overdue
+      const now = new Date();
+      const processed = rList.map(r => {
+        if (r.status === "pendente" && new Date(r.due_date) < now) return { ...r, status: "vencido" as Reminder["status"] };
+        return r;
+      });
+      setReminders(processed);
+      setVehicles(vList);
+    } catch (err) {
+      toast({ title: "Erro ao carregar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, [companyId]);
@@ -107,9 +112,13 @@ export default function FleetReminders() {
 
   const handleMarkPaid = async (r: Reminder) => {
     const now = new Date(); const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
-    const { error } = await supabase.from("fleet_reminders").update({ status: "pago", paid_date: todayStr }).eq("id", r.id);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Marcado como pago" }); fetchData(); }
+    try {
+      await api.patch("/fleet/reminders", { companyId, id: r.id, status: "pago", paid_date: todayStr });
+      toast({ title: "Marcado como pago" });
+      fetchData();
+    } catch (err) {
+      toast({ title: "Erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    }
   };
 
   const handleSave = async () => {
@@ -119,15 +128,8 @@ export default function FleetReminders() {
     }
     setSaving(true);
 
-    let attachment_url: string | null = form.existingAttachment || null;
-    if (file) {
-      const ext = file.name.split(".").pop();
-      const path = `${companyId}/frotas/reminders/${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("invoices").upload(path, file);
-      if (upErr) { toast({ title: "Erro no upload", description: upErr.message, variant: "destructive" }); setSaving(false); return; }
-      const { data: urlData } = supabase.storage.from("invoices").getPublicUrl(path);
-      attachment_url = urlData.publicUrl;
-    }
+    // Anexos ficam para a v2 (Vercel Blob); campo mantido por compatibilidade
+    const attachment_url: string | null = form.existingAttachment || null;
 
     const payload = {
       company_id: companyId, vehicle_id: form.vehicle_id, type: form.type,
@@ -136,24 +138,33 @@ export default function FleetReminders() {
       paid_date: form.paid_date || null, notes: form.notes || null, attachment_url,
     };
 
-    let error;
-    if (editingId) {
-      ({ error } = await supabase.from("fleet_reminders").update(payload).eq("id", editingId));
-    } else {
-      ({ error } = await supabase.from("fleet_reminders").insert(payload));
+    try {
+      if (editingId) {
+        await api.patch("/fleet/reminders", { companyId, id: editingId, ...payload });
+      } else {
+        await api.post("/fleet/reminders", { companyId, ...payload });
+      }
+      toast({ title: editingId ? "Vencimento atualizado" : "Vencimento cadastrado" });
+      setDialogOpen(false);
+      fetchData();
+    } catch (err) {
+      toast({ title: "Erro ao salvar", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setSaving(false);
     }
-
-    if (error) toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
-    else { toast({ title: editingId ? "Vencimento atualizado" : "Vencimento cadastrado" }); setDialogOpen(false); fetchData(); }
-    setSaving(false);
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    const { error } = await supabase.from("fleet_reminders").delete().eq("id", deleteId);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Vencimento excluído" }); fetchData(); }
-    setDeleteId(null);
+    try {
+      await api.del("/fleet/reminders", { companyId, id: deleteId });
+      toast({ title: "Vencimento excluído" });
+      fetchData();
+    } catch (err) {
+      toast({ title: "Erro", description: err instanceof Error ? err.message : "", variant: "destructive" });
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const vehicleMap = Object.fromEntries(vehicles.map(v => [v.id, v]));
