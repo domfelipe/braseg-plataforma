@@ -43,11 +43,10 @@ export const MODULES: ModuleDef[] = [
   },
   {
     key: "seguranca",
-    label: "Segurança",
-    description: "Coleta de dados de segurança em campo",
+    label: "Segurança do Trabalho",
+    description: "PGR/PGRTR e riscos ocupacionais em campo",
     icon: ShieldCheck,
     route: "/seguranca",
-    comingSoon: true,
     order: 4,
   },
 ];

@@ -10,13 +10,17 @@ if (!url) {
   process.exit(1);
 }
 
-const schema = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "schema.sql"), "utf8");
+const base = dirname(fileURLToPath(import.meta.url));
+const files = [join(base, "schema.sql"), join(base, "seguranca", "catalogs.sql")];
 const client = new pg.Client({ connectionString: url, ssl: { rejectUnauthorized: false } });
 
 await client.connect();
 try {
-  await client.query(schema);
-  console.log("✔ schema aplicado com sucesso");
+  for (const file of files) {
+    const sql = readFileSync(file, "utf8");
+    await client.query(sql);
+    console.log("✔ aplicado:", file);
+  }
 } finally {
   await client.end();
 }

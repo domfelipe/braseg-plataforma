@@ -7,6 +7,7 @@
     { "source": "/frotas", "destination": "/" },
     { "source": "/frotas/inspecoes/:path*", "destination": "/" },
     { "source": "/seguranca", "destination": "/" },
+    { "source": "/seguranca/:path*", "destination": "/" },
     { "source": "/perfil/:path*", "destination": "/" },
     { "source": "/configuracoes", "destination": "/" }
   ]
