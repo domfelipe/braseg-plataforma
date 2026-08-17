@@ -1,6 +1,13 @@
 {
   "rewrites": [
-    { "handle": "filesystem" },
-    { "source": "/(.*)", "destination": "/" }
+    { "source": "/", "destination": "/" },
+    { "source": "/login/:path*", "destination": "/" },
+    { "source": "/redefinir-senha", "destination": "/" },
+    { "source": "/dashboard", "destination": "/" },
+    { "source": "/frotas", "destination": "/" },
+    { "source": "/frotas/inspecoes/:path*", "destination": "/" },
+    { "source": "/seguranca", "destination": "/" },
+    { "source": "/perfil/:path*", "destination": "/" },
+    { "source": "/configuracoes", "destination": "/" }
   ]
 }
