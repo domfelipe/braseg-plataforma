@@ -1,4 +1,4 @@
-import { db } from "../../_lib/db.js";
+import { db } from "../../../_lib/db.js";
 
 /** Montagem do modelo de dados do documento PGR/PGRTR a partir do banco (fonte única). */
 

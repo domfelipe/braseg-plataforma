@@ -1,8 +1,8 @@
-import { requireUserId } from "../_lib/auth.js";
-import { db } from "../_lib/db.js";
-import { handleError, json, query } from "../_lib/http.js";
+import { requireUserId } from "../../_lib/auth.js";
+import { db } from "../../_lib/db.js";
+import { handleError, json, query } from "../../_lib/http.js";
 import type { IncomingMessage, ServerResponse } from "http";
-import { assertCompanyAccess } from "../_lib/tenant.js";
+import { assertCompanyAccess } from "../../_lib/tenant.js";
 
 export const config = { runtime: "nodejs" };
 
