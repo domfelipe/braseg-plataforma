@@ -38,7 +38,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       if (!clientId) return json(res, { error: "clientId obrigatório" }, 400);
       await assertClientAccess(clientId, companyId);
       const rows = await db().query(
-        "SELECT id, doc_type, version, status, valid_from, valid_until, catalog_layout_version, generated_at, (docx_blob_url IS NOT NULL) AS has_docx, (pdf_blob_url IS NOT NULL) AS has_pdf FROM seg_documents WHERE client_id = $1 ORDER BY generated_at DESC",
+        "SELECT id, doc_type, version, status, valid_from, valid_until, catalog_layout_version, generated_at, (docx_blob_url IS NOT NULL) AS has_docx, (pdf_blob_url IS NOT NULL) AS has_pdf, pdf_blob_url, docx_blob_url FROM seg_documents WHERE client_id = $1 ORDER BY generated_at DESC",
         [clientId]
       );
       return json(res, { documents: rows.rows });
