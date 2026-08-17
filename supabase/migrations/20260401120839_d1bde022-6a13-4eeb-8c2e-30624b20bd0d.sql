@@ -1,0 +1,1 @@
+ALTER TABLE public.schedules ADD COLUMN max_weekly_hours integer DEFAULT 44;

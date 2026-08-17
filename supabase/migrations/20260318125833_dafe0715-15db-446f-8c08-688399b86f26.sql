@@ -1,0 +1,1 @@
+ALTER TABLE public.professional_payments ADD COLUMN drive_file_id text NULL;

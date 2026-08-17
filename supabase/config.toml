@@ -1,0 +1,43 @@
+project_id = "mbsrmwfntetzzfmnqavq"
+
+[functions.analyze-nf]
+verify_jwt = false
+
+[functions.receive-invoice]
+verify_jwt = false
+
+[functions.chatwoot-api]
+verify_jwt = false
+
+[functions.upload-nota-fiscal]
+verify_jwt = false
+
+[functions.google-auth-callback]
+verify_jwt = false
+
+[functions.sync-calendar]
+verify_jwt = false
+
+[functions.calendar-webhook]
+verify_jwt = false
+
+[functions.renew-calendar-watch]
+verify_jwt = false
+
+[functions.sync-drive]
+verify_jwt = false
+
+[functions.receive-receipt]
+verify_jwt = false
+
+[functions.generate-receipt]
+verify_jwt = false
+
+[functions.dashboard-ai-summary]
+verify_jwt = false
+
+[functions.send-swap-email]
+verify_jwt = false
+
+[functions.public-submit-invoice]
+verify_jwt = false

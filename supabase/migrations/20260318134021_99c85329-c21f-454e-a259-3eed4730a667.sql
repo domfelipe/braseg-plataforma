@@ -1,0 +1,1 @@
+UPDATE user_company_access SET modules = array_append(modules, 'financial_pagar') WHERE user_id = '9081ad3e-a3f2-42c4-87ef-1bfb1d46f7b6' AND NOT ('financial_pagar' = ANY(modules));

@@ -1,0 +1,1 @@
+ALTER TABLE public.financial_transactions ADD COLUMN city text NULL;

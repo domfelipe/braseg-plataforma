@@ -1,0 +1,1 @@
+UPDATE professional_payments SET amount = 9425.00 WHERE id = 'e3b879eb-95ac-42dc-a503-445a56a639c4';

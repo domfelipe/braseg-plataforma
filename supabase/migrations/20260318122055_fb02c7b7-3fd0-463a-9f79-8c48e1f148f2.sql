@@ -1,0 +1,1 @@
+ALTER TABLE public.professional_payments ADD COLUMN location text NULL;

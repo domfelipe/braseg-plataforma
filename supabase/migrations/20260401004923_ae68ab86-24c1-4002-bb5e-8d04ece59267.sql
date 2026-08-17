@@ -1,0 +1,2 @@
+ALTER TABLE public.financial_transactions DROP CONSTRAINT financial_transactions_status_check;
+ALTER TABLE public.financial_transactions ADD CONSTRAINT financial_transactions_status_check CHECK (status = ANY (ARRAY['pendente'::text, 'pago'::text, 'vencido'::text, 'cancelado'::text, 'processando'::text]));
