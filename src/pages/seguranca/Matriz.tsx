@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -67,6 +68,7 @@ export default function Matriz({ clientId, companyId }: Props) {
   const [editing, setEditing] = useState<RiskRow | null>(null);
   const [addingFor, setAddingFor] = useState<GesRow | null>(null);
   const [newAgent, setNewAgent] = useState("");
+  const [nrsOpen, setNrsOpen] = useState(false);
   const [form, setForm] = useState({
     frequency: "C" as string,
     severity: "3" as string,
@@ -146,6 +148,7 @@ export default function Matriz({ clientId, companyId }: Props) {
       record_control: r.record_control,
       nr_codes: r.nr_codes,
     });
+    setNrsOpen(false);
   };
 
   const classification = isFrequency(form.frequency) && isSeverity(Number(form.severity))
@@ -215,13 +218,13 @@ export default function Matriz({ clientId, companyId }: Props) {
         open={editing !== null || addingFor !== null}
         onOpenChange={(open) => { if (!open) { setEditing(null); setAddingFor(null); } }}
       >
-        <DialogContent className="max-h-[88vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-lg">
+          <DialogHeader className="shrink-0">
             <DialogTitle>{editing ? "Editar risco" : "Adicionar risco"} — {editing?.ges_name ?? addingFor?.name}</DialogTitle>
             <DialogDescription>Classificação sempre calculada pelo motor 5×5 (nunca digitada).</DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div>
               <Label className="text-xs">Agente de risco</Label>
               {editing ? (
@@ -289,29 +292,44 @@ export default function Matriz({ clientId, companyId }: Props) {
               <Label htmlFor="risk-record" className="text-xs">Forma de registro e controle</Label>
               <Textarea id="risk-record" className="mt-1" rows={2} value={form.record_control} onChange={(e) => setForm((f) => ({ ...f, record_control: e.target.value }))} />
             </div>
-            <div>
-              <Label className="text-xs">NRs aplicáveis</Label>
-              <div className="mt-1.5 max-h-36 overflow-y-auto rounded-lg border border-border p-2">
-                {catalog.data?.nrs.map((n) => {
-                  const checked = form.nr_codes.includes(n.code);
-                  return (
-                    <label key={n.code} className="flex cursor-pointer items-center gap-2 rounded p-1 text-xs hover:bg-background/60">
-                      <input type="checkbox" className="h-3.5 w-3.5 rounded accent-[#1f3d9d]" checked={checked} onChange={() => {
-                        setForm((f) => ({
-                          ...f,
-                          nr_codes: checked ? f.nr_codes.filter((c) => c !== n.code) : [...f.nr_codes, n.code],
-                        }));
-                      }} />
-                      <span className="font-semibold">{n.code}</span>
-                      <span className="truncate text-muted-foreground">{n.title}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
+            <Collapsible open={nrsOpen} onOpenChange={setNrsOpen}>
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-left text-xs hover:bg-background/80"
+                >
+                  <span className="flex items-center gap-2 font-semibold">
+                    <ChevronDown className={"h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform " + (nrsOpen ? "rotate-180" : "")} />
+                    NRs aplicáveis
+                  </span>
+                  <span className="shrink-0 text-[11px] text-muted-foreground">
+                    {form.nr_codes.length} selecionada(s)
+                  </span>
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="mt-1 space-y-0.5 rounded-lg border border-border p-1.5">
+                  {catalog.data?.nrs.map((n) => {
+                    const checked = form.nr_codes.includes(n.code);
+                    return (
+                      <label key={n.code} className="flex cursor-pointer items-center gap-2 rounded p-1 text-xs hover:bg-background/60">
+                        <input type="checkbox" className="h-3.5 w-3.5 rounded accent-[#1f3d9d]" checked={checked} onChange={() => {
+                          setForm((f) => ({
+                            ...f,
+                            nr_codes: checked ? f.nr_codes.filter((c) => c !== n.code) : [...f.nr_codes, n.code],
+                          }));
+                        }} />
+                        <span className="font-semibold">{n.code}</span>
+                        <span className="truncate text-muted-foreground">{n.title}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => { setEditing(null); setAddingFor(null); }}>Cancelar</Button>
             <Button onClick={() => save.mutate(editing?.id ?? null)} disabled={save.isPending || (!editing && !newAgent)}>
               Salvar risco
