@@ -30,7 +30,7 @@ const updateServiceWorker = registerSW({
 function boot() {
   createRoot(document.getElementById("root")!).render(
     <ClerkProvider
-      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
+      publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "pk_test_ZmxlZXQtcmF2ZW4tNDE2NS5jbGVyay5hY2NvdW50cy5kZXYk"}
       afterSignOutUrl="/login"
       signInFallbackRedirectUrl="/dashboard"
       signUpFallbackRedirectUrl="/dashboard"
