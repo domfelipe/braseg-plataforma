@@ -20,6 +20,8 @@ const Frotas = lazy(() => import("./pages/Frotas"));
 const NovaInspecao = lazy(() => import("./pages/NovaInspecao"));
 const InspecaoDetalhe = lazy(() => import("./pages/InspecaoDetalhe"));
 const Seguranca = lazy(() => import("./pages/Seguranca"));
+const EmpresasNova = lazy(() => import("./pages/seguranca/EmpresasNova"));
+const ClientePainel = lazy(() => import("./pages/seguranca/ClientePainel"));
 const Perfil = lazy(() => import("./pages/Perfil"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -78,6 +80,8 @@ const App = () => (
                 <Route path="/frotas/inspecoes/nova" element={<ProtectedApp><NovaInspecao /></ProtectedApp>} />
                 <Route path="/frotas/inspecoes/:id" element={<ProtectedApp><InspecaoDetalhe /></ProtectedApp>} />
                 <Route path="/seguranca" element={<ProtectedApp><Seguranca /></ProtectedApp>} />
+                <Route path="/seguranca/empresas/nova" element={<ProtectedApp><EmpresasNova /></ProtectedApp>} />
+                <Route path="/seguranca/empresas/:id" element={<ProtectedApp><ClientePainel /></ProtectedApp>} />
                 <Route path="/perfil" element={<ProtectedApp><Perfil /></ProtectedApp>} />
                 <Route path="/perfil/*" element={<ProtectedApp><Perfil /></ProtectedApp>} />
                 <Route path="/configuracoes" element={<ProtectedApp><Configuracoes /></ProtectedApp>} />
