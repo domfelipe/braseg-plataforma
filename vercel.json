@@ -1,14 +1,16 @@
 {
-  "rewrites": [
-    { "source": "/", "destination": "/" },
-    { "source": "/login/:path*", "destination": "/" },
-    { "source": "/redefinir-senha", "destination": "/" },
-    { "source": "/dashboard", "destination": "/" },
-    { "source": "/frotas", "destination": "/" },
-    { "source": "/frotas/inspecoes/:path*", "destination": "/" },
-    { "source": "/seguranca", "destination": "/" },
-    { "source": "/seguranca/:path*", "destination": "/" },
-    { "source": "/perfil/:path*", "destination": "/" },
-    { "source": "/configuracoes", "destination": "/" }
+  "routes": [
+    { "handle": "filesystem" },
+    { "src": "^/api/seguranca/(.*)$", "dest": "/api/seguranca/[...path]" },
+    { "src": "^/$", "dest": "/" },
+    { "src": "^/login(/.*)?$", "dest": "/" },
+    { "src": "^/redefinir-senha$", "dest": "/" },
+    { "src": "^/dashboard$", "dest": "/" },
+    { "src": "^/frotas$", "dest": "/" },
+    { "src": "^/frotas/inspecoes(/.*)?$", "dest": "/" },
+    { "src": "^/seguranca$", "dest": "/" },
+    { "src": "^/seguranca(/.*)?$", "dest": "/" },
+    { "src": "^/perfil(/.*)?$", "dest": "/" },
+    { "src": "^/configuracoes$", "dest": "/" }
   ]
 }
