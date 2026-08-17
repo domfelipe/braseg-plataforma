@@ -1,7 +1,7 @@
 import { chromium } from "playwright-core";
 import { readFileSync } from "node:fs";
 
-const BASE = "http://localhost:3001";
+const BASE = process.env.E2E_BASE || "http://localhost:3001";
 const USER_ID = "user_3I1Pa4S2SMVyBDBxFPgu6mgXqU3";
 const PLATE = "ABC1D23";
 

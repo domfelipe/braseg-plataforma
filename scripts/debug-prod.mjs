@@ -1,0 +1,10 @@
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage({ locale: "pt-BR" });
+page.on("console", (m) => console.log("[console]", m.type(), m.text().slice(0, 250)));
+page.on("pageerror", (e) => console.log("[pageerror]", e.message.slice(0, 300)));
+await page.goto("https://braseg-plataforma.vercel.app/login", { waitUntil: "domcontentloaded" });
+await page.waitForTimeout(9000);
+console.log("URL:", page.url());
+console.log("BODY:", (await page.locator("body").innerText()).replace(/\n+/g, " | ").slice(0, 400));
+await browser.close();
