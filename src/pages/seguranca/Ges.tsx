@@ -1,11 +1,12 @@
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Camera, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
+import { Camera, ChevronDown, Pencil, Plus, Search, Sparkles, Trash2, X } from "lucide-react";
 import { api } from "@/integrations/api/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,7 @@ export default function Ges({ clientId, companyId }: Props) {
   const [agentSearch, setAgentSearch] = useState("");
   const [selectedAgents, setSelectedAgents] = useState<Set<string>>(new Set());
   const [photosFor, setPhotosFor] = useState<GesRow | null>(null);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
   const ges = useQuery({
@@ -124,11 +126,36 @@ export default function Ges({ clientId, companyId }: Props) {
     return map;
   }, [catalog.data, agentSearch]);
 
+  const agentRow = (a: SegAgent) => {
+    const checked = selectedAgents.has(a.code);
+    return (
+      <label
+        key={a.code}
+        className={"flex cursor-pointer items-center gap-2 rounded-md p-1.5 text-sm " + (checked ? "bg-primary/5" : "hover:bg-background/60")}
+      >
+        <input
+          type="checkbox"
+          className="h-4 w-4 shrink-0 rounded accent-[#1f3d9d]"
+          checked={checked}
+          onChange={() => {
+            const next = new Set(selectedAgents);
+            if (checked) next.delete(a.code);
+            else next.add(a.code);
+            setSelectedAgents(next);
+          }}
+        />
+        <span className="truncate">{a.agent}</span>
+        <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{a.code}</span>
+      </label>
+    );
+  };
+
   const openEdit = (g: GesRow) => {
     setEditing(g);
     setForm({ name: g.name, activities: g.activities, sector_id: g.sector_id ?? "none" });
     setSelectedAgents(new Set(g.agent_codes));
     setAgentSearch("");
+    setOpenGroups(new Set());
   };
 
   const onFile = async (file: File) => {
@@ -186,12 +213,13 @@ export default function Ges({ clientId, companyId }: Props) {
 
       {/* Editar GES */}
       <Dialog open={editing !== null} onOpenChange={(open) => { if (!open) setEditing(null); }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
+        <DialogContent className="flex max-h-[85vh] flex-col sm:max-w-lg">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Editar {editing?.code}</DialogTitle>
             <DialogDescription>Nome, atividades e agentes de risco do grupo.</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3">
+
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
             <div>
               <Label htmlFor="ges-name" className="text-xs">Nome</Label>
               <Input id="ges-name" className="mt-1" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
@@ -210,37 +238,71 @@ export default function Ges({ clientId, companyId }: Props) {
               <Label htmlFor="ges-act" className="text-xs">Descrição das atividades</Label>
               <Textarea id="ges-act" className="mt-1" rows={3} value={form.activities} onChange={(e) => setForm((f) => ({ ...f, activities: e.target.value }))} />
             </div>
+
             <div>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-8" placeholder="Buscar agente..." value={agentSearch} onChange={(e) => setAgentSearch(e.target.value)} />
               </div>
-              <div className="mt-2 max-h-56 space-y-3 overflow-y-auto rounded-lg border border-border p-3">
-                {[...groupedAgents.entries()].map(([grp, items]) => (
-                  <div key={grp}>
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{AGENT_GROUP_LABELS[grp] ?? grp}</p>
-                    {items.map((a) => {
-                      const checked = selectedAgents.has(a.code);
-                      return (
-                        <label key={a.code} className={"mt-1 flex cursor-pointer items-center gap-2 rounded-md p-1.5 text-sm " + (checked ? "bg-primary/5" : "hover:bg-background/60")}>
-                          <input type="checkbox" className="h-4 w-4 rounded accent-[#1f3d9d]" checked={checked} onChange={() => {
-                            const next = new Set(selectedAgents);
-                            if (checked) next.delete(a.code); else next.add(a.code);
-                            setSelectedAgents(next);
-                          }} />
-                          <span className="truncate">{a.agent}</span>
-                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">{a.code}</span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                ))}
-              </div>
+
+              {agentSearch.trim() !== "" ? (
+                <div className="mt-2 space-y-3">
+                  {[...groupedAgents.entries()].map(([grp, items]) => (
+                    <div key={grp}>
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{AGENT_GROUP_LABELS[grp] ?? grp}</p>
+                      <div className="mt-1 space-y-0.5">{items.map(agentRow)}</div>
+                    </div>
+                  ))}
+                  {groupedAgents.size === 0 && (
+                    <p className="py-6 text-center text-xs text-muted-foreground">Nenhum agente encontrado para a busca.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-2 space-y-1.5">
+                  {[...groupedAgents.entries()].map(([grp, items]) => {
+                    const selectedCount = items.filter((a) => selectedAgents.has(a.code)).length;
+                    const open = openGroups.has(grp);
+                    return (
+                      <Collapsible
+                        key={grp}
+                        open={open}
+                        onOpenChange={(o) =>
+                          setOpenGroups((prev) => {
+                            const next = new Set(prev);
+                            if (o) next.add(grp);
+                            else next.delete(grp);
+                            return next;
+                          })
+                        }
+                      >
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex w-full items-center justify-between gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-left text-xs hover:bg-background/80"
+                          >
+                            <span className="flex items-center gap-2 font-semibold">
+                              <ChevronDown className={"h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform " + (open ? "rotate-180" : "")} />
+                              {AGENT_GROUP_LABELS[grp] ?? grp}
+                            </span>
+                            <span className="shrink-0 text-[11px] text-muted-foreground">
+                              {selectedCount}/{items.length} selecionados
+                            </span>
+                          </button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="mt-1 space-y-0.5 rounded-lg border border-border p-1.5">{items.map(agentRow)}</div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="shrink-0">
             <Button variant="outline" onClick={() => setEditing(null)}>Cancelar</Button>
-            <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar {selectedAgents.size} agente(s)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
