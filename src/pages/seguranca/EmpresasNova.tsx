@@ -39,7 +39,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function EmpresasNova() {
   const navigate = useNavigate();
-  const { selectedCompany } = useCompany();
+  const { selectedCompany, loading: companyLoading } = useCompany();
   const companyId = selectedCompany?.id;
 
   const form = useForm<FormValues>({
@@ -182,8 +182,8 @@ export default function EmpresasNova() {
 
         <div className="flex justify-end gap-3">
           <Button type="button" variant="outline" onClick={() => navigate("/seguranca")}>Cancelar</Button>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? "Salvando..." : "Cadastrar empresa"}
+          <Button type="submit" disabled={create.isPending || companyLoading || !companyId} title={!companyId ? "Carregando sua empresa..." : undefined}>
+            {companyLoading ? "Carregando..." : create.isPending ? "Salvando..." : "Cadastrar empresa"}
           </Button>
         </div>
       </form>
