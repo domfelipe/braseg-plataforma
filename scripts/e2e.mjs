@@ -5,6 +5,20 @@ const BASE = process.env.E2E_BASE || "http://localhost:3001";
 const USER_ID = "user_3I1Pa4S2SMVyBDBxFPgu6mgXqU3";
 const PLATE = "ABC1D23";
 
+// Gera CNPJ válido (dígitos verificadores) a partir de um seed — p/ criar empresa de teste
+function validCnpj(seed) {
+  const base = String(seed).padStart(12, "0").slice(-12);
+  const calc = (b) => {
+    const w = b.length === 12 ? [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2] : [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const s = [...b].reduce((a, d, i) => a + Number(d) * w[i], 0);
+    const r = s % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  const d1 = calc(base);
+  const d2 = calc(base + d1);
+  return base + d1 + d2;
+}
+
 // CLERK_SECRET_KEY vem de .env.vercel (vercel env pull) ou do ambiente
 const envFile = readFileSync(".env.vercel", "utf8");
 const secret = ((envFile.match(/^CLERK_SECRET_KEY=(.+)$/m) || [])[1] || process.env.CLERK_SECRET_KEY || "").trim().replace(/^["']|["']$/g, "");
@@ -124,9 +138,93 @@ try {
   await page.waitForSelector("text=" + PLATE, { timeout: 15000 });
   ok("histórico lista a inspeção", true);
 
-  // 7) SEGURANÇA + DHChat
+  // 7) SEGURANÇA DO TRABALHO — fluxo completo até gerar PGR
   await page.goto(BASE + "/seguranca", { waitUntil: "networkidle" });
-  ok("segurança placeholder", (await page.locator("text=Em breve").count()) > 0 && (await page.locator("text=Coleta de dados de segurança em campo").count()) > 0);
+  await page.waitForSelector("text=Segurança do Trabalho", { timeout: 15000 });
+  ok("módulo Segurança do Trabalho abre (sem 'Em breve')", (await page.locator("text=Em breve").count()) === 0);
+
+  // 7.1) Nova empresa cliente (CNPJ válido gerado por execução)
+  const CNPJ = validCnpj(Date.now());
+  await page.getByRole("link", { name: /nova empresa/i }).first().click();
+  await page.waitForSelector('input[id="razao_social"]', { timeout: 10000 });
+  await page.fill('input[id="razao_social"]', "E2E TESTE SEGURANCA LTDA");
+  await page.fill('input[id="cnpj"]', CNPJ);
+  await page.fill('input[id="responsavel"]', "Responsavel E2E");
+  await page.fill('textarea[id="atividade_principal"]', "Beneficiamento de pedras ornamentais");
+  await page.getByRole("button", { name: /cadastrar empresa/i }).click();
+  await page.waitForURL(/seguranca\/empresas\/[0-9a-f-]+/, { timeout: 20000 });
+  const clientId = page.url().split("/").pop();
+  ok("empresa cliente criada (CNPJ válido)", true, clientId || "");
+
+  // 7.2) Levantamento: setor + cargo + agente + funcionário
+  await page.getByRole("tab", { name: /levantamento/i }).click();
+  await page.waitForSelector("text=Setores", { timeout: 10000 });
+  await page.fill('input[placeholder*="Produção"]', "Producao");
+  await page.getByRole("button", { name: /^adicionar$/i }).first().click();
+  await page.waitForSelector("text=Producao", { timeout: 10000 });
+  ok("setor adicionado no levantamento", true);
+
+  await page.fill('input[id="role-name"]', "Marmorista");
+  await page.fill('textarea[id="role-desc"]', "Corte e acabamento de pedras ornamentais");
+  await page.getByRole("button", { name: /^adicionar$/i }).nth(1).click();
+  await page.waitForSelector("text=Marmorista", { timeout: 10000 });
+  ok("cargo adicionado", true);
+
+  await page.getByRole("button", { name: /agentes \(0\)/i }).click();
+  await page.waitForSelector("text=Agentes de risco", { timeout: 10000 });
+  await page.fill('input[placeholder*="Buscar agente"]', "Ruído");
+  await page.locator('label:has-text("Ruído")').first().click();
+  await page.getByRole("button", { name: /salvar 1 agente/i }).click();
+  await page.waitForSelector("text=1 agente(s) de risco", { timeout: 10000 });
+  ok("agente de risco marcado por cargo (Tabela 24)", true);
+
+  await page.fill('input[id="emp-name"]', "Joao E2E");
+  await page.getByRole("button", { name: /^adicionar$/i }).nth(2).click();
+  await page.waitForSelector("text=Joao E2E", { timeout: 10000 });
+  ok("funcionário adicionado", true);
+
+  // 7.3) GES automático
+  await page.getByRole("tab", { name: /^ges$/i }).click();
+  await page.getByRole("button", { name: /gerar ges automaticamente/i }).click();
+  await page.waitForSelector("text=GES 01", { timeout: 15000 });
+  ok("GES gerado automaticamente", true);
+
+  // 7.4) Matriz: risco com classificação calculada
+  await page.getByRole("tab", { name: /matriz/i }).click();
+  await page.getByRole("button", { name: /adicionar risco/i }).click();
+  await page.waitForSelector("text=Classificação:", { timeout: 10000 });
+  await page.fill('textarea[id="risk-effects"]', "Perda auditiva");
+  await page.getByRole("button", { name: /salvar risco/i }).click();
+  await page.waitForSelector("text=3 - MODERADO", { timeout: 10000 });
+  ok("risco salvo com classificação calculada 5×5", true);
+
+  // 7.5) Plano de ação
+  await page.getByRole("tab", { name: /plano de ação/i }).click();
+  await page.fill('input[id="plan-desc"]', "Enclausurar as serras de corte");
+  await page.fill('input[id="plan-resp"]', "Engenharia");
+  await page.getByRole("button", { name: /^adicionar$/i }).last().click();
+  await page.waitForSelector("text=Enclausurar as serras de corte", { timeout: 10000 });
+  ok("item de plano de ação criado", true);
+
+  // 7.6) Gerar PGR (final, com assinatura)
+  await page.getByRole("tab", { name: /documentos/i }).click();
+  await page.getByRole("button", { name: /gerar documento/i }).click();
+  await page.waitForSelector("text=Gerar documento", { timeout: 10000 });
+  await page.fill('input[id="doc-consultant"]', "Consultor E2E");
+  const canvas = page.locator('canvas[role="img"]').last();
+  const sigBox = await canvas.boundingBox();
+  if (sigBox) {
+    await page.mouse.move(sigBox.x + 40, sigBox.y + sigBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(sigBox.x + 220, sigBox.y + sigBox.height / 2, { steps: 10 });
+    await page.mouse.up();
+  }
+  await page.getByRole("button", { name: /gerar pgr\/pgrtr/i }).click();
+  await page.waitForSelector("text=PGR — NR-01", { timeout: 45000 });
+  ok("documento PGR gerado (PDF + DOCX)", (await page.locator('a[download$=".pdf"]').count()) > 0);
+  await page.screenshot({ path: "/tmp/braseg-e2e-5-seguranca.png" });
+
+  // 7.7) DHChat continua externo
   await page.waitForSelector('a[href*="dhchat.domhubs.com.br"]', { timeout: 10000 });
   const dh = page.locator('a[href*="dhchat.domhubs.com.br"]');
   ok("DHChat link externo na sidebar", (await dh.count()) > 0, (await dh.first().getAttribute("href")) || "");
