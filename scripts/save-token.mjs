@@ -1,5 +1,5 @@
 import { chromium } from "playwright-core";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 const envFile = readFileSync(".env.vercel", "utf8");
 const secret = ((envFile.match(/^CLERK_SECRET_KEY=(.+)$/m) || [])[1] || "").trim().replace(/^["']|["']$/g, "");
 const res = await fetch("https://api.clerk.com/v1/sign_in_tokens", {
@@ -11,11 +11,8 @@ const { token } = await res.json();
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ locale: "pt-BR" });
 await page.goto("https://braseg-plataforma.vercel.app/login?__clerk_ticket=" + token, { waitUntil: "networkidle" });
-await page.waitForTimeout(4000);
-await page.goto("https://braseg-plataforma.vercel.app/frotas/inspecoes/b3d33c35-bfb1-40e0-94b2-9fb2f1257160", { waitUntil: "networkidle" });
-await page.waitForTimeout(6000);
-const imgs = await page.evaluate(() => {
-  return Array.from(document.querySelectorAll("img")).map((i) => ({ alt: i.alt, srcLen: (i.getAttribute("src") || "").length, srcHead: (i.getAttribute("src") || "").slice(0, 40) }));
-});
-console.log(JSON.stringify(imgs, null, 1)); console.log("URL:", page.url()); console.log("BODY:", (await page.locator("body").innerText()).replace(/\n+/g, " | ").slice(0, 500));
+await page.waitForTimeout(8000);
+const t = await page.evaluate(() => window.Clerk?.session?.getToken());
+writeFileSync("/tmp/prod-token.txt", t || "");
+console.log("token:", t ? t.slice(0, 20) + "..." : "NULO");
 await browser.close();
