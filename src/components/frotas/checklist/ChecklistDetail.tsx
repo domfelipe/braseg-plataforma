@@ -52,25 +52,34 @@ export function ChecklistDetail() {
   useEffect(() => {
     if (!id || !selectedCompany?.id) return;
     let cancelled = false;
-    api
-      .get<{ checklist: DetailRow; answers: AnswerRow[]; photos: PhotoRow[] }>("/fleet/checklists/" + id, {
-        companyId: selectedCompany.id,
-      })
-      .then((data) => {
-        if (cancelled) return;
-        setRow(data.checklist);
-        setAnswers(data.answers);
-        setPhotos(data.photos);
-        setLoading(false);
-      })
-      .catch(() => {
-        if (cancelled) {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const load = (attempt: number) => {
+      api
+        .get<{ checklist: DetailRow; answers: AnswerRow[]; photos: PhotoRow[] }>("/fleet/checklists/" + id, {
+          companyId: selectedCompany.id,
+        })
+        .then((data) => {
+          if (cancelled) return;
+          setRow(data.checklist);
+          setAnswers(data.answers);
+          setPhotos(data.photos);
+          setLoading(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt < 3) {
+            timer = setTimeout(() => load(attempt + 1), 700);
+            return;
+          }
           setNotFound(true);
           setLoading(false);
-        }
-      });
+        });
+    };
+    load(0);
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
     };
   }, [id, selectedCompany?.id]);
 
