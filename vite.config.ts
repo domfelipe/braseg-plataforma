@@ -31,7 +31,6 @@ export default defineConfig(({ mode }) => ({
         skipWaiting: true,
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        importScripts: ["/push-sw.js", "/share-sw.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -54,41 +53,15 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       manifest: {
-        name: "Grupo Forte Serviços - Plataforma de Gestão",
-        short_name: "Grupo Forte",
-        description: "Plataforma de Gestão Integrada do Grupo Forte Serviços",
-        theme_color: "#1a365d",
-        background_color: "#f5f6f8",
+        name: "Braseg Portal",
+        short_name: "Braseg",
+        description: "Portal unificado da Braseg: DHChat, Frotas e Segurança.",
+        theme_color: "#17233F",
+        background_color: "#FFFFFF",
         display: "standalone",
         orientation: "portrait-primary",
         scope: "/",
         start_url: "/",
-        share_target: {
-          action: "/compartilhar",
-          method: "POST",
-          enctype: "multipart/form-data",
-          params: {
-            title: "title",
-            text: "text",
-            url: "url",
-            files: [
-              {
-                name: "files",
-                accept: [
-                  "image/*",
-                  "application/pdf",
-                  ".pdf",
-                  ".doc",
-                  ".docx",
-                  ".xls",
-                  ".xlsx",
-                  ".csv",
-                  ".txt",
-                ],
-              },
-            ],
-          },
-        } as any,
         icons: [
           {
             src: "/pwa-icon-192.png",

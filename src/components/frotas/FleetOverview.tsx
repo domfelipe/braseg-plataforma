@@ -6,18 +6,41 @@ import { Badge } from "@/components/ui/badge";
 import { Car, Wrench, AlertTriangle, DollarSign } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
+interface FleetVehicleRow {
+  id: string;
+  plate: string;
+  brand: string;
+  model: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface FleetReminderRow {
+  id: string;
+  title: string;
+  due_date: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+interface FleetMaintenanceRow {
+  id: string;
+  date: string;
+  description: string;
+  cost: number;
+  vehicle_id: string;
+  [key: string]: unknown;
+}
+
 const formatCurrency = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function FleetOverview() {
   const { selectedCompany } = useCompany();
   const [stats, setStats] = useState({ vehicles: 0, activeVehicles: 0, totalMaintCost: 0, maintenances: 0 });
-  const [upcomingReminders, setUpcomingReminders] = useState<any[]>([]);
-  const [recentMaintenances, setRecentMaintenances] = useState<any[]>([]);
-  const [vehicleMap, setVehicleMap] = useState<Record<string, any>>({});
+  const [upcomingReminders, setUpcomingReminders] = useState<FleetReminderRow[]>([]);
+  const [recentMaintenances, setRecentMaintenances] = useState<FleetMaintenanceRow[]>([]);
+  const [vehicleMap, setVehicleMap] = useState<Record<string, FleetVehicleRow>>({});
   const [loading, setLoading] = useState(true);
-
-  const companyId = selectedCompany?.id;
-
   useEffect(() => {
     if (!companyId) return;
     const fetch = async () => {
@@ -28,29 +51,29 @@ export default function FleetOverview() {
         supabase.from("fleet_reminders").select("*").eq("company_id", companyId).in("status", ["pendente", "vencido"]).order("due_date").limit(10),
       ]);
 
-      const vList = (vehicles as any[]) || [];
-      const mList = (maintenances as any[]) || [];
-      const rList = (reminders as any[]) || [];
+      const vList = (vehicles as FleetVehicleRow[]) || [];
+      const mList = (maintenances as FleetMaintenanceRow[]) || [];
+      const rList = (reminders as FleetReminderRow[]) || [];
 
       const vMap = Object.fromEntries(vList.map(v => [v.id, v]));
       setVehicleMap(vMap);
 
       // Get total maintenance cost
       const { data: allMaint } = await supabase.from("fleet_maintenances").select("cost").eq("company_id", companyId);
-      const totalCost = ((allMaint as any[]) || []).reduce((s, m) => s + (m.cost || 0), 0);
+      const totalCost = ((allMaint as FleetMaintenanceRow[]) || []).reduce((s, m) => s + Number(m.cost || 0), 0);
 
       setStats({
         vehicles: vList.length,
         activeVehicles: vList.filter(v => v.status === "ativo").length,
         totalMaintCost: totalCost,
-        maintenances: ((allMaint as any[]) || []).length,
+        maintenances: ((allMaint as FleetMaintenanceRow[]) || []).length,
       });
 
       // Mark overdue
       const now = new Date();
       setUpcomingReminders(rList.map(r => ({
         ...r,
-        status: r.status === "pendente" && new Date(r.due_date) < now ? "vencido" : r.status,
+        status: r.status === "pendente" && new Date(r.due_date) < now ? "vencido" : String(r.status),
       })));
       setRecentMaintenances(mList);
       setLoading(false);

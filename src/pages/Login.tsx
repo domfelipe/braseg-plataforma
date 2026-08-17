@@ -5,10 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Loader2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Loader2, Eye, EyeOff, ArrowLeft, ShieldCheck, Truck, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import forteLogo from "@/assets/forte-login-logo.png";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -45,7 +43,7 @@ export default function Login() {
     setLoading(true);
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
+      redirectTo: window.location.origin + "/redefinir-senha",
     });
 
     setLoading(false);
@@ -67,24 +65,92 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-primary via-accent to-primary" />
-      <div className="absolute top-1/4 -left-20 h-72 w-72 rounded-full bg-white/10 blur-3xl animate-float" />
-      <div className="absolute bottom-1/4 -right-20 h-96 w-96 rounded-full bg-white/5 blur-3xl animate-float" style={{ animationDelay: '2s' }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-white/5 blur-3xl" />
-      <div className="absolute top-10 right-1/4 h-32 w-32 rounded-full bg-white/10 blur-2xl animate-float" style={{ animationDelay: '4s' }} />
+    <div className="flex min-h-screen bg-background">
+      {/* Painel navy */}
+      <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-[#17233F] p-12 text-white lg:flex">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-35"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(222 40% 30% / 0.35) 1px, transparent 1px), linear-gradient(90deg, hsl(222 40% 30% / 0.35) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        <div className="pointer-events-none absolute -right-24 top-1/3 h-80 w-80 rounded-full bg-amber-400/10 blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 bottom-10 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl" />
 
-      <Card className="w-full max-w-md glass border-0 shadow-2xl relative z-10 animate-fade-in-up">
-        <CardHeader className="text-center space-y-4 pb-2 pt-8">
-          <img src={forteLogo} alt="Forte Serviços" className="mx-auto h-16 object-contain" />
-          <p className="text-sm text-muted-foreground">
-            {mode === "login" ? "Plataforma de Gestão Integrada" : "Recuperação de senha"}
+        <div className="relative z-10 flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl gradient-accent shadow-lg shadow-amber-500/20">
+            <ShieldCheck className="h-6 w-6 text-[#17233F]" strokeWidth={1.75} />
+          </div>
+          <div>
+            <p className="font-display text-lg font-bold tracking-tight">BRASEG</p>
+            <p className="text-xs text-white/50">Portal Unificado</p>
+          </div>
+        </div>
+
+        <div className="relative z-10 max-w-md">
+          <h1 className="font-display text-4xl font-bold leading-tight tracking-tight">
+            Operação, frota e segurança em um só lugar.
+          </h1>
+          <p className="mt-4 text-sm leading-relaxed text-white/60">
+            Um único login para o dia a dia da Braseg: atendimento no DHChat, gestão
+            completa de veículos com inspeções e a evolução da coleta de dados de
+            segurança em campo.
           </p>
-        </CardHeader>
+          <div className="mt-8 space-y-3">
+            {[
+              { icon: MessageSquare, label: "DHChat — atendimento e conversas" },
+              { icon: Truck, label: "Frotas — veículos, manutenções e inspeções" },
+              { icon: ShieldCheck, label: "Segurança — coleta de dados em campo" },
+            ].map(({ icon: Icon, label }) => (
+              <div key={label} className="flex items-center gap-3 text-sm text-white/70">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 ring-1 ring-white/10">
+                  <Icon className="h-4 w-4 text-amber-400" strokeWidth={1.75} />
+                </div>
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
 
-        <CardContent className="px-8 pb-8">
+        <p className="relative z-10 text-xs text-white/30">© {new Date().getFullYear()} Braseg · powered by DOMCO</p>
+      </div>
+
+      {/* Formulário */}
+      <div className="flex w-full items-center justify-center px-6 py-12 lg:w-1/2">
+        <div className="w-full max-w-sm animate-fade-in-up">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-accent">
+              <ShieldCheck className="h-5 w-5 text-[#17233F]" strokeWidth={1.75} />
+            </div>
+            <div>
+              <p className="font-display text-base font-bold tracking-tight">BRASEG</p>
+              <p className="text-xs text-muted-foreground">Portal Unificado</p>
+            </div>
+          </div>
+
+          {mode === "recovery" ? (
+            <button
+              type="button"
+              onClick={() => setMode("login")}
+              className="mb-6 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-4 w-4" /> Voltar para o login
+            </button>
+          ) : null}
+
+          <h2 className="font-display text-2xl font-bold tracking-tight">
+            {mode === "login" ? "Bem-vindo de volta" : "Recuperar senha"}
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {mode === "login"
+              ? "Acesse o portal da Braseg com suas credenciais."
+              : "Enviaremos um link para redefinir sua senha."}
+          </p>
+
           {mode === "login" ? (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs font-medium">E-mail</Label>
                 <Input
@@ -95,7 +161,7 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="h-11 bg-background/60 backdrop-blur-sm border-border/50 focus:border-primary"
+                  className="h-11"
                 />
               </div>
 
@@ -110,13 +176,14 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    className="h-11 bg-background/60 backdrop-blur-sm border-border/50 focus:border-primary pr-10"
+                    className="h-11 pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
                     tabIndex={-1}
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -125,24 +192,20 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setMode("recovery")}
-                    className="text-xs text-primary hover:underline"
+                    className="text-xs font-medium text-accent hover:text-accent/80 hover:underline"
                   >
                     Esqueci minha senha
                   </button>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                className="w-full h-11 gradient-accent hover:opacity-90 text-white font-semibold shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              <Button type="submit" variant="accent" className="h-11 w-full font-semibold" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Entrar
               </Button>
             </form>
           ) : (
-            <form onSubmit={handleRecovery} className="space-y-5">
+            <form onSubmit={handleRecovery} className="mt-8 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="recovery-email" className="text-xs font-medium">E-mail</Label>
                 <Input
@@ -153,31 +216,18 @@ export default function Login() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
-                  className="h-11 bg-background/60 backdrop-blur-sm border-border/50 focus:border-primary"
+                  className="h-11"
                 />
               </div>
 
-              <Button
-                type="submit"
-                className="w-full h-11 gradient-accent hover:opacity-90 text-white font-semibold shadow-lg shadow-primary/20 transition-all duration-300 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
-                disabled={loading}
-              >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              <Button type="submit" variant="accent" className="h-11 w-full font-semibold" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 Enviar link de recuperação
               </Button>
-
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
-              >
-                <ArrowLeft className="h-3 w-3" />
-                Voltar ao login
-              </button>
             </form>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

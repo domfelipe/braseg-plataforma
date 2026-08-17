@@ -71,7 +71,7 @@ export default function FleetVehicles() {
     if (error) {
       toast({ title: "Erro ao carregar veículos", description: error.message, variant: "destructive" });
     } else {
-      setVehicles((data as any[]) || []);
+      setVehicles((data as Vehicle[]) || []);
     }
     setLoading(false);
   };
@@ -105,7 +105,7 @@ export default function FleetVehicles() {
       return;
     }
     setSaving(true);
-    const payload: any = {
+    const payload = {
       company_id: companyId,
       plate: form.plate.toUpperCase(),
       brand: form.brand,

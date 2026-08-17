@@ -69,8 +69,8 @@ export default function FleetMaintenances() {
       supabase.from("fleet_maintenances").select("*").eq("company_id", companyId).order("date", { ascending: false }),
       supabase.from("fleet_vehicles").select("id, plate, brand, model").eq("company_id", companyId).order("plate"),
     ]);
-    setMaintenances((mData as any[]) || []);
-    setVehicles((vData as any[]) || []);
+    setMaintenances((mData as Maintenance[]) || []);
+    setVehicles((vData as Vehicle[]) || []);
     setLoading(false);
   };
 
@@ -114,7 +114,7 @@ export default function FleetMaintenances() {
     }
 
     const items = form.items_replaced.split(",").map(s => s.trim()).filter(Boolean);
-    const payload: any = {
+    const payload = {
       company_id: companyId, vehicle_id: form.vehicle_id, type: form.type,
       description: form.description, date: form.date,
       mileage_at_service: form.mileage_at_service ? parseInt(form.mileage_at_service) : null,

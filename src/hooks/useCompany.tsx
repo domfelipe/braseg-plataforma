@@ -90,7 +90,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const selectedCompany = companies.find((c) => c.id === selectedCompanyId) || null;
 
   const userModules = isMaster
-    ? ["dashboard", "financial", "payments", "documents", "whatsapp", "events", "timesheet", "fleet", "schedules"]
+    ? ["dashboard", "dhchat", "fleet", "seguranca"]
     : companyAccess.find((a) => a.company_id === selectedCompanyId)?.modules || [];
 
   const isAcudir = selectedCompany?.cnpj === "30.636.545/0001-50";

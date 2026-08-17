@@ -2,122 +2,153 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Braseg Portal — Design System (tokens)
+ * Fonte de verdade: DESIGN.md (OKLCH). Valores abaixo são os equivalentes
+ * HSL usados pelo mecanismo hsl(var(--x)) do Tailwind (compatível com o
+ * sistema shadcn/ui existente). Hex de referência nos comentários.
+ */
 @layer base {
   :root {
-    --background: 220 20% 97%;
-    --foreground: 220 25% 12%;
-
+    /* Superfícies (branco puro — o âmbar carrega o calor) */
+    --background: 0 0% 100%;            /* #FFFFFF */
+    --foreground: 0 0% 12%;             /* #1F1F1F */
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 12%;
-
+    --card-foreground: 0 0% 12%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 12%;
+    --popover-foreground: 0 0% 12%;
 
-    --primary: 210 69% 18%;
-    --primary-foreground: 210 40% 98%;
+    /* Âmbar-mel (primária) — texto navy sobre âmbar para contraste AA */
+    --primary: 38 76% 53%;              /* #E3A12E */
+    --primary-foreground: 222 46% 17%;  /* #17233F */
 
-    --secondary: 215 25% 94%;
-    --secondary-foreground: 210 69% 18%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 222 46% 17%;
 
-    --muted: 220 20% 95%;
-    --muted-foreground: 220 12% 50%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 0 0% 47%;       /* #787878 */
 
-    --accent: 214 59% 46%;
-    --accent-foreground: 0 0% 100%;
+    /* Navy (accent) — botões primários, foco estrutural */
+    --accent: 222 48% 23%;              /* #1F3057 */
+    --accent-foreground: 218 44% 96%;   /* #F2F5FA */
 
-    --destructive: 0 72% 51%;
+    --destructive: 6 64% 46%;           /* #C0392B */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 152 60% 38%;
+    --success: 152 64% 29%;             /* #1B7A4E */
     --success-foreground: 0 0% 100%;
 
     --warning: 38 92% 50%;
-    --warning-foreground: 220 25% 12%;
+    --warning-foreground: 222 46% 17%;
 
-    --info: 210 80% 52%;
+    --info: 222 60% 50%;
     --info-foreground: 0 0% 100%;
 
-    --border: 220 16% 91%;
-    --input: 220 16% 91%;
-    --ring: 214 59% 46%;
+    --border: 0 0% 89%;                 /* #E4E4E4 */
+    --input: 0 0% 89%;
+    --ring: 38 76% 53%;                 /* anel de foco âmbar */
 
-    --radius: 0.75rem;
+    --radius: 0.625rem;                 /* 10px */
 
-    --sidebar-background: 220 30% 16%;
-    --sidebar-foreground: 220 20% 92%;
-    --sidebar-primary: 214 59% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 25% 22%;
-    --sidebar-accent-foreground: 220 20% 95%;
-    --sidebar-border: 220 20% 22%;
-    --sidebar-ring: 214 59% 46%;
+    /* Sidebar navy profundo */
+    --sidebar-background: 222 46% 17%;  /* #17233F */
+    --sidebar-foreground: 218 44% 96%;
+    --sidebar-primary: 38 76% 53%;
+    --sidebar-primary-foreground: 222 46% 17%;
+    --sidebar-accent: 222 40% 22%;
+    --sidebar-accent-foreground: 218 44% 96%;
+    --sidebar-border: 222 40% 24%;
+    --sidebar-ring: 38 76% 53%;
   }
 
   .dark {
-    --background: 210 40% 5%;
-    --foreground: 210 20% 93%;
-    --card: 210 35% 8%;
-    --card-foreground: 210 20% 93%;
-    --popover: 210 35% 8%;
-    --popover-foreground: 210 20% 93%;
-    --primary: 214 59% 46%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 30% 14%;
-    --secondary-foreground: 210 20% 93%;
-    --muted: 210 30% 14%;
-    --muted-foreground: 210 15% 55%;
-    --accent: 214 59% 52%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 62% 42%;
+    --background: 0 0% 7%;              /* #111111 */
+    --foreground: 0 0% 96%;
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 96%;
+
+    --primary: 40 76% 56%;
+    --primary-foreground: 222 46% 12%;
+
+    --secondary: 0 0% 17%;
+    --secondary-foreground: 0 0% 93%;
+
+    --muted: 0 0% 17%;
+    --muted-foreground: 0 0% 68%;
+
+    --accent: 220 40% 40%;
+    --accent-foreground: 218 44% 96%;
+
+    --destructive: 6 62% 42%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 60% 38%;
+
+    --success: 152 55% 35%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 210 40% 10%;
-    --info: 214 70% 55%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 46% 12%;
+
+    --info: 220 60% 60%;
     --info-foreground: 0 0% 100%;
-    --border: 210 30% 16%;
-    --input: 210 30% 16%;
-    --ring: 214 59% 46%;
-    --sidebar-background: 210 45% 6%;
-    --sidebar-foreground: 210 20% 88%;
-    --sidebar-primary: 214 59% 46%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 35% 14%;
-    --sidebar-accent-foreground: 210 20% 88%;
-    --sidebar-border: 210 30% 16%;
-    --sidebar-ring: 214 59% 46%;
+
+    --border: 0 0% 24%;
+    --input: 0 0% 24%;
+    --ring: 40 76% 56%;
+
+    --sidebar-background: 222 40% 10%;
+    --sidebar-foreground: 218 30% 85%;
+    --sidebar-primary: 40 76% 56%;
+    --sidebar-primary-foreground: 222 46% 12%;
+    --sidebar-accent: 222 35% 16%;
+    --sidebar-accent-foreground: 218 30% 88%;
+    --sidebar-border: 222 30% 18%;
+    --sidebar-ring: 40 76% 56%;
   }
 }
 
 @layer base {
   * {
     @apply border-border;
-    transition: background-color 0.3s ease, color 0.15s ease, border-color 0.3s ease;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  h1, h2, h3, .font-display {
+    font-family: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
-/* Tabular nums for financial values */
+/* Números de KPI com algarismos tabulares */
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Gradient Utilities ── */
+/* ── Gradientes (identidade Braseg — navy/âmbar, sem arco-íris) ── */
 .gradient-primary {
-  background: linear-gradient(135deg, hsl(210 69% 18%), hsl(214 59% 46%));
+  background: linear-gradient(135deg, hsl(222 48% 23%), hsl(222 46% 17%));
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, hsl(38 76% 53%), hsl(37 71% 42%));
 }
 
 .gradient-success {
-  background: linear-gradient(135deg, hsl(152 60% 38%), hsl(160 55% 48%));
+  background: linear-gradient(135deg, hsl(152 64% 29%), hsl(160 55% 38%));
 }
 
 .gradient-destructive {
-  background: linear-gradient(135deg, hsl(0 72% 51%), hsl(15 80% 55%));
+  background: linear-gradient(135deg, hsl(6 64% 46%), hsl(15 70% 50%));
 }
 
 .gradient-warning {
@@ -125,53 +156,30 @@
 }
 
 .gradient-info {
-  background: linear-gradient(135deg, hsl(210 80% 52%), hsl(220 75% 60%));
-}
-
-.gradient-accent {
-  background: linear-gradient(135deg, hsl(214 59% 46%), hsl(210 69% 18%));
+  background: linear-gradient(135deg, hsl(222 60% 50%), hsl(220 65% 58%));
 }
 
 .gradient-card-shine {
   background: linear-gradient(135deg, hsl(0 0% 100% / 0.12) 0%, transparent 60%);
 }
 
-/* ── Glassmorphism ── */
+/* ── Vidro (login) ── */
 .glass {
-  background: hsl(0 0% 100% / 0.75);
+  background: hsl(0 0% 100% / 0.78);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid hsl(0 0% 100% / 0.3);
 }
 
 .dark .glass {
-  background: hsl(220 25% 9% / 0.7);
-  border: 1px solid hsl(220 25% 16% / 0.5);
+  background: hsl(222 40% 10% / 0.72);
+  border: 1px solid hsl(222 30% 18% / 0.5);
 }
 
-/* ── Gradient Text ── */
-.gradient-text {
-  background: linear-gradient(135deg, hsl(210 69% 18%), hsl(214 59% 46%), hsl(210 69% 18%));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ── Animations ── */
+/* ── Animações ── */
 @keyframes fade-in-up {
-  0% {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(3deg); }
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse-soft {
@@ -179,36 +187,22 @@
   50% { opacity: 1; }
 }
 
-@keyframes shimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
 .animate-fade-in-up {
-  animation: fade-in-up 0.5s ease-out both;
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
+  animation: fade-in-up 0.4s ease-out both;
 }
 
 .animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
 
-.animate-shimmer {
-  background-size: 200% auto;
-  animation: shimmer 3s linear infinite;
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in-up,
+  .animate-pulse-soft {
+    animation: none;
+  }
 }
 
-/* Staggered card animation delays */
-.animate-delay-1 { animation-delay: 0.1s; }
-.animate-delay-2 { animation-delay: 0.2s; }
-.animate-delay-3 { animation-delay: 0.3s; }
-.animate-delay-4 { animation-delay: 0.4s; }
-.animate-delay-5 { animation-delay: 0.5s; }
-
-/* Print styles for PDF export */
+/* Impressão */
 @media print {
   .no-print {
     display: none !important;

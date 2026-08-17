@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Bell, CheckCircle, AlertTriangle, Clock, Search, Paperclip, X, ExternalLink } from "lucide-react";
+import { LucideIcon, Plus, Pencil, Trash2, Bell, CheckCircle, AlertTriangle, Clock, Search, Paperclip, X, ExternalLink } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 
 interface Reminder {
@@ -37,7 +37,7 @@ const typeLabels: Record<string, string> = {
   revisao: "Revisão", troca_oleo: "Troca de Óleo", troca_pneu: "Troca de Pneu", outro: "Outro",
 };
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: any }> = {
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: LucideIcon }> = {
   pendente: { label: "Pendente", variant: "secondary", icon: Clock },
   pago: { label: "Pago", variant: "default", icon: CheckCircle },
   vencido: { label: "Vencido", variant: "destructive", icon: AlertTriangle },
@@ -76,12 +76,12 @@ export default function FleetReminders() {
     ]);
     // Auto-mark overdue
     const now = new Date();
-    const processed = ((rData as any[]) || []).map(r => {
-      if (r.status === "pendente" && new Date(r.due_date) < now) return { ...r, status: "vencido" };
+    const processed = ((rData as Reminder[]) || []).map(r => {
+      if (r.status === "pendente" && new Date(r.due_date) < now) return { ...r, status: "vencido" as Reminder["status"] };
       return r;
     });
     setReminders(processed);
-    setVehicles((vData as any[]) || []);
+    setVehicles((vData as Vehicle[]) || []);
     setLoading(false);
   };
 
@@ -129,7 +129,7 @@ export default function FleetReminders() {
       attachment_url = urlData.publicUrl;
     }
 
-    const payload: any = {
+    const payload = {
       company_id: companyId, vehicle_id: form.vehicle_id, type: form.type,
       title: form.title, due_date: form.due_date, status: form.status,
       cost: form.cost ? parseFloat(form.cost) : null,

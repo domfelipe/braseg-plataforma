@@ -1,73 +1,34 @@
-# Welcome to your Lovable project
+# Braseg Portal
 
-## Project info
+Portal unificado da **Braseg Consultoria e Treinamentos**: DHChat, Frotas e Segurança em um só login.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+- **DHChat** — link externo para `https://dhchat.domhubs.com.br` (abre em nova aba; URL configurável via `VITE_DHCHAT_URL`).
+- **Frotas** — veículos, manutenções, vencimentos e custos (paridade com o sistema anterior) + checklist de inspeção (Fase 2).
+- **Segurança** — placeholder do app de coleta de dados de segurança do trabalho em campo (Fase 3 de produto).
 
-## How can I edit this code?
+## Stack
 
-There are several ways of editing your application.
+Vite · React 18 · TypeScript · Tailwind CSS · shadcn/ui · Supabase (Cloud) · React Router 6 · TanStack Query · framer-motion · recharts · vite-plugin-pwa. Deploy: Vercel.
 
-**Use Lovable**
+## Desenvolvimento
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+cp .env.example .env   # preencha VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY
+npm run dev            # http://localhost:8080
+npm run build
+npm run lint
+npm test
 ```
 
-**Edit a file directly in GitHub**
+## Estrutura de módulos
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Os módulos da sidebar são declarados em `src/lib/moduleRegistry.ts` (chave, rótulo, ícone, rota ou `externalUrl`, `comingSoon`). A visibilidade por usuário vem de `user_company_access.modules` (master vê tudo). Não há CNPJs hardcoded.
 
-**Use GitHub Codespaces**
+## Design
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+Tokens e regras visuais em `DESIGN.md` (OKLCH canônico; HSL aplicado em `src/index.css`). Paleta navy/âmbar, Space Grotesk + Inter.
 
-## What technologies are used for this project?
+## Base
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Importado de `github.com/domfelipe/grupoforteserv` (histórico reiniciado). Spec técnica e plano: `docs/` do workspace DevSquad DOM.
