@@ -11,11 +11,14 @@ const { token } = await res.json();
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const page = await browser.newPage({ locale: "pt-BR" });
 await page.goto("https://braseg-plataforma.vercel.app/login?__clerk_ticket=" + token, { waitUntil: "networkidle" });
-await page.waitForTimeout(4000);
-await page.goto("https://braseg-plataforma.vercel.app/frotas/inspecoes/a3d0dc28-736c-41d6-8d9b-e13947aba1f4", { waitUntil: "networkidle" });
-await page.waitForTimeout(6000);
-const imgs = await page.evaluate(() => {
-  return Array.from(document.querySelectorAll("img")).map((i) => ({ alt: i.alt, srcLen: (i.getAttribute("src") || "").length, srcHead: (i.getAttribute("src") || "").slice(0, 40) }));
+await page.waitForTimeout(8000);
+const out = await page.evaluate(async () => {
+  const t = await window.Clerk.session.getToken();
+  const me = await fetch("/api/me", { headers: { Authorization: "Bearer " + t } }).then((r) => r.json());
+  const cid = me.companies?.[0]?.id;
+  const r = await fetch("/api/fleet/checklists/6d6ec433-7a3d-4f7e-969c-44d18e362350?companyId=" + cid, { headers: { Authorization: "Bearer " + t } });
+  const body = await r.json();
+  return { status: r.status, hasChecklist: !!body.checklist, sigLen: (body.checklist && body.checklist.signature_data_url || "").length, err: body.error };
 });
-console.log(JSON.stringify(imgs, null, 1)); console.log("URL:", page.url()); console.log("BODY:", (await page.locator("body").innerText()).replace(/\n+/g, " | ").slice(0, 500));
+console.log(JSON.stringify(out));
 await browser.close();

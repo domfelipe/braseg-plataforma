@@ -104,8 +104,18 @@ try {
   ok("inspeção salva → detalhe", true, page.url());
   await page.waitForSelector("text=Conforme", { timeout: 15000 });
   ok("detalhe mostra status Conforme", true);
-  await page.waitForSelector("img[alt='Assinatura do condutor']", { timeout: 10000 });
-  ok("assinatura exibida no detalhe", true);
+  let sigOk = true;
+  try {
+    await page.waitForSelector("img[alt='Assinatura do condutor']", { timeout: 10000 });
+  } catch {
+    sigOk = false;
+    const dump = await page.evaluate(() => {
+      const imgs = Array.from(document.querySelectorAll("img")).map((i) => ({ alt: i.alt, src: (i.getAttribute("src") || "").slice(0, 40), w: i.clientWidth, h: i.clientHeight }));
+      return JSON.stringify(imgs);
+    });
+    console.log("[debug imgs]", dump);
+  }
+  ok("assinatura exibida no detalhe", sigOk);
   await page.screenshot({ path: "/tmp/braseg-e2e-4-detalhe.png" });
 
   // 6) HISTÓRICO
