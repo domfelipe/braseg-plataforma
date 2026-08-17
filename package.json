@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "typecheck:api": "tsc --noEmit --module commonjs --moduleResolution node --target es2022 --esModuleInterop --skipLibCheck $(find api -name '*.ts')"
   },
   "dependencies": {
     "@clerk/backend": "^3.16.6",
