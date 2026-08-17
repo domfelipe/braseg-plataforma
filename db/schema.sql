@@ -329,3 +329,12 @@ CREATE INDEX IF NOT EXISTS idx_seg_action_plan_client_status ON seg_action_plan 
 CREATE INDEX IF NOT EXISTS idx_seg_documents_client_type ON seg_documents (client_id, doc_type, generated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_seg_sync_outbox_company_client ON seg_sync_outbox (company_id, client_id, status);
 
+
+CREATE TABLE IF NOT EXISTS seg_ges_roles (
+  ges_id uuid NOT NULL REFERENCES seg_ges(id) ON DELETE CASCADE,
+  role_id uuid NOT NULL REFERENCES seg_roles(id) ON DELETE CASCADE,
+  PRIMARY KEY (ges_id, role_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_seg_ges_roles_role ON seg_ges_roles (role_id);
+

@@ -10,7 +10,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCnpj } from "@/lib/seguranca/matrix";
 import type { SegClient, SegCounts } from "@/lib/seguranca/types";
+import Ges from "./Ges";
 import Levantamento from "./Levantamento";
+import Matriz from "./Matriz";
+import PlanoAcao from "./PlanoAcao";
 
 const steps = [
   { key: "roles", label: "Levantamento", done: (c: SegCounts) => c.roles > 0 },
@@ -142,9 +145,9 @@ export default function ClientePainel() {
           <Levantamento clientId={id ?? ""} companyId={companyId ?? ""} />
         </TabsContent>
 
-        <TabsContent value="ges" className="mt-4"><ComingSoon title="Grupos de Exposição Similar" /></TabsContent>
-        <TabsContent value="matriz" className="mt-4"><ComingSoon title="Inventário & Matriz de Risco" /></TabsContent>
-        <TabsContent value="plano" className="mt-4"><ComingSoon title="Plano de Ação" /></TabsContent>
+        <TabsContent value="ges" className="mt-4"><Ges clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
+        <TabsContent value="matriz" className="mt-4"><Matriz clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
+        <TabsContent value="plano" className="mt-4"><PlanoAcao clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
         <TabsContent value="documentos" className="mt-4"><ComingSoon title="Geração de PGR/PGRTR" /></TabsContent>
       </Tabs>
     </div>
