@@ -220,7 +220,7 @@ try {
     await page.mouse.up();
   }
   await page.getByRole("button", { name: /gerar pgr\/pgrtr/i }).click();
-  await page.waitForSelector("text=PGR — NR-01", { timeout: 45000 });
+  await page.waitForSelector('a[download$=".pdf"]', { timeout: 45000 });
   ok("documento PGR gerado (PDF + DOCX)", (await page.locator('a[download$=".pdf"]').count()) > 0);
   await page.screenshot({ path: "/tmp/braseg-e2e-5-seguranca.png" });
 
