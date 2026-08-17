@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCnpj } from "@/lib/seguranca/matrix";
 import type { SegClient, SegCounts } from "@/lib/seguranca/types";
+import Documentos from "./Documentos";
 import Ges from "./Ges";
 import Levantamento from "./Levantamento";
 import Matriz from "./Matriz";
@@ -148,7 +149,7 @@ export default function ClientePainel() {
         <TabsContent value="ges" className="mt-4"><Ges clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
         <TabsContent value="matriz" className="mt-4"><Matriz clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
         <TabsContent value="plano" className="mt-4"><PlanoAcao clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
-        <TabsContent value="documentos" className="mt-4"><ComingSoon title="Geração de PGR/PGRTR" /></TabsContent>
+        <TabsContent value="documentos" className="mt-4"><Documentos clientId={id ?? ""} companyId={companyId ?? ""} /></TabsContent>
       </Tabs>
     </div>
   );
